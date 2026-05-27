@@ -1,0 +1,155 @@
+<?php
+
+namespace Afterburner\Meetings\Providers;
+
+use Afterburner\Meetings\Console\Commands\InstallCommand;
+use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
+use Afterburner\Meetings\Livewire\Meetings\Create;
+use Afterburner\Meetings\Livewire\Meetings\Index;
+use Afterburner\Meetings\Livewire\Meetings\MeetingBallots;
+use Afterburner\Meetings\Livewire\Meetings\MeetingDocuments;
+use Afterburner\Meetings\Livewire\Meetings\Show;
+use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Policies\MeetingPolicy;
+use Afterburner\Meetings\Support\DocumentsIntegration;
+use Afterburner\Meetings\Support\VotingIntegration;
+use Afterburner\Voting\Events\BallotClosed;
+use Afterburner\Voting\Events\BallotPublished;
+use App\Models\Team;
+use App\Support\Navigation;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
+
+class MeetingsServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        if (! class_exists(Team::class)) {
+            return;
+        }
+
+        $this->mergeConfigFrom(
+            __DIR__.'/../../config/afterburner-meetings.php',
+            'afterburner-meetings'
+        );
+    }
+
+    public function boot(): void
+    {
+        if (! class_exists(Team::class)) {
+            return;
+        }
+
+        if (! config('afterburner-meetings.enabled', true)) {
+            return;
+        }
+
+        $this->publishes([
+            __DIR__.'/../../config/afterburner-meetings.php' => config_path('afterburner-meetings.php'),
+        ], 'afterburner-meetings-config');
+
+        $this->publishes([
+            __DIR__.'/../../database/migrations' => database_path('migrations'),
+        ], 'afterburner-meetings-migrations');
+
+        $this->publishes([
+            __DIR__.'/../../resources/views' => resource_path('views/vendor/afterburner-meetings'),
+        ], 'afterburner-meetings-assets');
+
+        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'afterburner-meetings');
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        $this->loadRoutesFrom(__DIR__.'/../../routes/web.php');
+
+        $this->registerLivewireComponents();
+        $this->registerPolicies();
+        $this->registerAuditSkipRoutes();
+        $this->registerNavigation();
+        $this->registerVotingEventListeners();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                InstallCommand::class,
+            ]);
+        }
+    }
+
+    protected function registerLivewireComponents(): void
+    {
+        Livewire::component('meetings.index', Index::class);
+        Livewire::component('meetings.show', Show::class);
+        Livewire::component('meetings.create', Create::class);
+
+        if (DocumentsIntegration::isAvailable()) {
+            Livewire::component('meetings.meeting-documents', MeetingDocuments::class);
+        }
+
+        if (VotingIntegration::isAvailable()) {
+            Livewire::component('meetings.meeting-ballots', MeetingBallots::class);
+        }
+    }
+
+    protected function registerPolicies(): void
+    {
+        Gate::policy(Meeting::class, MeetingPolicy::class);
+    }
+
+    protected function registerAuditSkipRoutes(): void
+    {
+        if (! config()->has('audit.skip_routes')) {
+            return;
+        }
+
+        $skipRoutes = config('afterburner-meetings.audit.skip_routes', []);
+
+        config([
+            'audit.skip_routes' => array_values(array_unique(array_merge(
+                config('audit.skip_routes', []),
+                $skipRoutes
+            ))),
+        ]);
+    }
+
+    protected function registerNavigation(): void
+    {
+        if (! class_exists(Navigation::class)) {
+            return;
+        }
+
+        Navigation::register([
+            'label' => 'Meetings',
+            'route' => 'teams.meetings.index',
+            'route_params' => function () {
+                $user = auth()->user();
+                if (! $user || ! $user->currentTeam) {
+                    return [];
+                }
+
+                return ['team' => $user->currentTeam->id];
+            },
+            'icon' => 'user-group',
+            'order' => 20,
+            'permission' => function ($user) {
+                if (! $user || ! $user->currentTeam) {
+                    return false;
+                }
+
+                return $user->can('viewAny', Meeting::class);
+            },
+            'active' => function () {
+                return request()->routeIs('teams.meetings.*');
+            },
+        ]);
+    }
+
+    protected function registerVotingEventListeners(): void
+    {
+        if (! class_exists(BallotPublished::class) || ! VotingIntegration::isEnabled()) {
+            return;
+        }
+
+        Event::listen(BallotPublished::class, SyncMeetingBallotContext::class);
+        Event::listen(BallotClosed::class, SyncMeetingBallotContext::class);
+    }
+}

@@ -1,0 +1,62 @@
+{
+    "name": "laravel-afterburner/meetings",
+    "description": "Team-scoped meetings for Afterburner applications",
+    "version": "1.0.0",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0",
+        "laravel-afterburner/jetstream": "^1.0|dev-master",
+        "livewire/livewire": "^3.5"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.13",
+        "laravel-afterburner/documents": "@dev",
+        "laravel-afterburner/voting": "@dev",
+        "orchestra/testbench": "^9.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Afterburner\\Meetings\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Afterburner\\Meetings\\Tests\\": "tests/",
+            "App\\Models\\": "tests/Fixtures/Models/",
+            "App\\Traits\\": "tests/Fixtures/Traits/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "pint": "pint"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Afterburner\\Meetings\\Providers\\MeetingsServiceProvider"
+            ],
+            "commands": [
+                "Afterburner\\Meetings\\Console\\Commands\\InstallCommand"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../afterburner-documents"
+        },
+        {
+            "type": "path",
+            "url": "../afterburner-voting"
+        }
+    ],
+    "suggest": {
+        "laravel-afterburner/documents": "Attach team documents to meetings for agendas and notices.",
+        "laravel-afterburner/voting": "Link ballots to meetings without duplicating vote mechanics."
+    }
+}

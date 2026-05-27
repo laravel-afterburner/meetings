@@ -1,0 +1,293 @@
+<?php
+
+namespace Afterburner\Meetings\Tests\Feature;
+
+use Afterburner\Meetings\Actions\CreateMeeting;
+use Afterburner\Meetings\Actions\LinkBallotToMeeting;
+use Afterburner\Meetings\Actions\RecordAttendance;
+use Afterburner\Meetings\Actions\UpdateMeeting;
+use Afterburner\Meetings\Actions\UpdateMeetingMinutes;
+use Afterburner\Meetings\Enums\AttendanceStatus;
+use Afterburner\Meetings\Enums\MeetingStatus;
+use Afterburner\Meetings\Enums\MeetingType;
+use Afterburner\Meetings\Events\MeetingScheduled;
+use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
+use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Notifications\MeetingScheduledNotification;
+use Afterburner\Meetings\Support\AttendanceRecorderResolver;
+use Afterburner\Meetings\Tests\TestCase;
+use Afterburner\Voting\Actions\CreateBallot;
+use Afterburner\Voting\Actions\PublishBallot;
+use Afterburner\Voting\Enums\BallotType;
+use Afterburner\Voting\Enums\ElectorateType;
+use Afterburner\Voting\Events\BallotPublished;
+use App\Models\User;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
+
+class MeetingFlowTest extends TestCase
+{
+    public function test_create_and_update_meeting(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $user,
+            'Annual General Meeting',
+            MeetingType::Agm,
+            'Community hall',
+            'https://meet.example.com/agm',
+            'Budget review and elections',
+            now()->addWeek(),
+            ['manager'],
+        );
+
+        $this->assertSame(MeetingStatus::Draft, $meeting->status);
+        $this->assertSame('Annual General Meeting', $meeting->title);
+        $this->assertSame(['manager'], $meeting->target_role_slugs);
+        $this->assertDatabaseHas('meetings', [
+            'id' => $meeting->id,
+            'team_id' => $team->id,
+            'type' => 'agm',
+        ]);
+    }
+
+    public function test_record_attendance_for_invited_team_member(): void
+    {
+        [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
+        $member = $this->createAdditionalUser($team, [], 'member@example.com');
+        $this->attachExistingRole($member, $team, 'manager');
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $manager,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        app(RecordAttendance::class)->execute(
+            $meeting,
+            $manager,
+            $member->id,
+            AttendanceStatus::Present,
+        );
+
+        $this->assertDatabaseHas('meeting_attendances', [
+            'meeting_id' => $meeting->id,
+            'user_id' => $member->id,
+            'status' => 'present',
+        ]);
+    }
+
+    public function test_scheduling_meeting_notifies_invited_users(): void
+    {
+        Notification::fake();
+
+        [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
+        $member = $this->createAdditionalUser($team, [], 'member@example.com');
+        $this->attachExistingRole($member, $team, 'manager');
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $manager,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        $freshMeeting = $meeting->fresh(['team']);
+
+        app(\Afterburner\Meetings\Listeners\NotifyMeetingAudience::class)
+            ->handle(new MeetingScheduled($freshMeeting));
+
+        Notification::assertSentTo($member, MeetingScheduledNotification::class);
+        Notification::assertNotSentTo($manager, MeetingScheduledNotification::class);
+        $this->assertNotNull($freshMeeting->fresh()->invitations_sent_at);
+    }
+
+    public function test_update_meeting_to_scheduled_notifies_invited_users(): void
+    {
+        Notification::fake();
+
+        [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
+        $member = $this->createAdditionalUser($team, [], 'member@example.com');
+        $this->attachExistingRole($member, $team, 'manager');
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $manager,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        app(UpdateMeeting::class)->execute(
+            $meeting,
+            $manager,
+            $meeting->title,
+            $meeting->type,
+            MeetingStatus::Scheduled,
+            null,
+            null,
+            null,
+            now()->addWeek(),
+            ['manager'],
+        );
+
+        Notification::assertSentTo($member, MeetingScheduledNotification::class);
+    }
+
+    public function test_attendance_recorder_falls_back_when_secretary_not_present(): void
+    {
+        [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary');
+        $president = $this->createAdditionalUser($team, ['manage_meetings'], 'president@example.com');
+
+        $this->assignRole($secretary, 'secretary', $team->id);
+        $this->assignRole($president, 'president', $team->id);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $secretary,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['secretary', 'president'],
+        );
+
+        app(UpdateMeeting::class)->execute(
+            $meeting,
+            $secretary,
+            $meeting->title,
+            $meeting->type,
+            MeetingStatus::InProgress,
+            null,
+            null,
+            null,
+            null,
+            ['secretary', 'president'],
+        );
+
+        app(RecordAttendance::class)->execute(
+            $meeting->fresh(),
+            $secretary,
+            $president->id,
+            AttendanceStatus::Present,
+        );
+
+        $recorder = app(AttendanceRecorderResolver::class)->recorderFor($meeting->fresh());
+
+        $this->assertSame($president->id, $recorder?->id);
+        $this->assertTrue(app(AttendanceRecorderResolver::class)->canRecord($president, $meeting->fresh()));
+        $this->assertFalse(app(AttendanceRecorderResolver::class)->canRecord($secretary, $meeting->fresh()));
+    }
+
+    public function test_meeting_minutes_can_be_saved_and_finalized(): void
+    {
+        [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $manager,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        app(UpdateMeeting::class)->execute(
+            $meeting,
+            $manager,
+            $meeting->title,
+            $meeting->type,
+            MeetingStatus::InProgress,
+            null,
+            null,
+            null,
+            null,
+            ['manager'],
+        );
+
+        app(UpdateMeetingMinutes::class)->execute(
+            $meeting->fresh(),
+            $manager,
+            'Motion carried unanimously.',
+            true,
+        );
+
+        $meeting->refresh();
+        $this->assertSame('Motion carried unanimously.', $meeting->minutes);
+        $this->assertNotNull($meeting->minutes_finalized_at);
+        $this->assertSame($manager->id, $meeting->minutes_finalized_by_user_id);
+    }
+
+    public function test_link_ballot_and_sync_context_on_publish(): void
+    {
+        Event::fake([BallotPublished::class]);
+
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings', 'create_resolutions']);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $user,
+            'AGM with resolutions',
+            MeetingType::Agm,
+            targetRoleSlugs: ['manager'],
+        );
+
+        $ballot = app(CreateBallot::class)->execute(
+            $team,
+            $user,
+            'Approve budget',
+            null,
+            BallotType::Resolution,
+            ElectorateType::AllMembers,
+            [
+                ['label' => 'Yes'],
+                ['label' => 'No'],
+            ],
+            null,
+            null,
+            now()->subHour(),
+            now()->addWeek(),
+        );
+
+        app(LinkBallotToMeeting::class)->execute($meeting, $ballot->id, $user);
+
+        $this->assertDatabaseHas('meeting_ballots', [
+            'meeting_id' => $meeting->id,
+            'ballot_id' => $ballot->id,
+        ]);
+
+        $published = app(PublishBallot::class)->execute($ballot, $user);
+        app(SyncMeetingBallotContext::class)->handle(new BallotPublished($published));
+
+        $meeting->refresh();
+        $this->assertSame('published', $meeting->settings['ballot_events'][(string) $ballot->id]['event']);
+    }
+
+    protected function assignRole(User $user, string $slug, int $teamId): void
+    {
+        $roleId = $this->createRoleWithPermissions($slug, ['manage_meetings']);
+
+        \Illuminate\Support\Facades\DB::table('user_role')->insert([
+            'user_id' => $user->id,
+            'role_id' => $roleId,
+            'team_id' => $teamId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    protected function attachExistingRole(User $user, $team, string $roleSlug): void
+    {
+        $roleId = \Illuminate\Support\Facades\DB::table('roles')->where('slug', $roleSlug)->value('id');
+
+        \Illuminate\Support\Facades\DB::table('user_role')->insert([
+            'user_id' => $user->id,
+            'role_id' => $roleId,
+            'team_id' => is_object($team) ? $team->id : $team,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+}
