@@ -21,6 +21,7 @@ use Afterburner\Meetings\Policies\MeetingPolicy;
 use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Support\DocumentsIntegration;
 use Afterburner\Meetings\Support\VotingIntegration;
+use Afterburner\Playbook\Support\Playbook;
 use Afterburner\Voting\Events\BallotClosed;
 use Afterburner\Voting\Events\BallotPublished;
 use App\Models\Team;
@@ -83,6 +84,7 @@ class MeetingsServiceProvider extends ServiceProvider
         $this->registerPolicies();
         $this->registerAuditSkipRoutes();
         $this->registerNavigation();
+        $this->registerPlaybook();
         $this->registerVotingEventListeners();
         $this->registerActionItemEventListeners();
         $this->registerPackageSeeder();
@@ -161,6 +163,22 @@ class MeetingsServiceProvider extends ServiceProvider
             'active' => function () {
                 return request()->routeIs('teams.meetings.*');
             },
+        ]);
+    }
+
+    protected function registerPlaybook(): void
+    {
+        if (! class_exists(Playbook::class)) {
+            return;
+        }
+
+        Playbook::register([
+            'key' => 'meetings',
+            'label' => 'Meetings',
+            'order' => 20,
+            'path' => __DIR__.'/../../playbook',
+            'enabled' => fn () => config('afterburner-meetings.enabled', true),
+            'permission' => fn ($user) => $user?->can('viewAny', Meeting::class) ?? false,
         ]);
     }
 
