@@ -1,6 +1,6 @@
 # Afterburner Meetings
 
-Team-scoped meetings (AGM, council, special) for Afterburner applications. Meetings orchestrate schedules, attendance, document attachments, and optional ballot links — vote mechanics remain in `laravel-afterburner/voting`.
+Team-scoped meetings (AGM, council, special) for Afterburner Jetstream applications. Meetings orchestrate schedules, attendance, document attachments, and optional ballot links — vote mechanics remain in `laravel-afterburner/voting`.
 
 ## Installation
 
@@ -9,7 +9,16 @@ composer require laravel-afterburner/meetings
 php artisan afterburner:meetings:install
 ```
 
-Add `Afterburner\Meetings\Concerns\HasMeetings` to `App\Models\Team`.
+Add the `HasMeetings` trait to your `App\Models\Team` model:
+
+```php
+use Afterburner\Meetings\Concerns\HasMeetings;
+
+class Team extends JetstreamTeam
+{
+    use HasMeetings;
+}
+```
 
 ## Permissions
 
@@ -28,3 +37,7 @@ Implement attendance against property/lot voter units in the host app if needed.
 
 - Ballot casting, proxy votes, quorum, and tally (owned by the voting package).
 - BC-specific legal notice generation (defer to host app).
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
