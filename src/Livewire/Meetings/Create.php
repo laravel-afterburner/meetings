@@ -187,6 +187,7 @@ class Create extends Component
                 && Meeting::query()->whereKey($this->meetingId)->value('status') === MeetingStatus::Draft->value
                 && Auth::user()->can('delete', Meeting::query()->find($this->meetingId)),
             'documentsEnabled' => DocumentsIntegration::isEnabled(),
+            'documentsInstallPrompt' => DocumentsIntegration::shouldPromptInstall(),
             'scheduleTimezone' => TeamDateTime::teamTimezone($team),
             'audienceRoles' => app(MeetingAudienceService::class)->selectableRoles(),
         ]);

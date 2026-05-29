@@ -101,5 +101,7 @@
                 </div>
             @endif
         </div>
+    @elseif ($documentsInstallPrompt)
+        @include('afterburner-meetings::components.documents-install-prompt', ['context' => 'meeting'])
     @endif
 </div>

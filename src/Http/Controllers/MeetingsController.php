@@ -12,6 +12,7 @@ class MeetingsController
     public function index(Team $team): View
     {
         $this->ensureTeamAccess($team);
+        abort_unless(Auth::user()->can('viewAny', Meeting::class), 403);
 
         return view('afterburner-meetings::meetings.index', [
             'team' => $team,

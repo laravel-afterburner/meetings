@@ -2,17 +2,26 @@
 
 namespace Afterburner\Meetings\Tests\Feature;
 
+use Afterburner\Meetings\Actions\CompleteMeetingActionItem;
 use Afterburner\Meetings\Actions\CreateMeeting;
+use Afterburner\Meetings\Actions\CreateMeetingActionItem;
+use Afterburner\Meetings\Actions\DeleteMeetingActionItem;
 use Afterburner\Meetings\Actions\LinkBallotToMeeting;
 use Afterburner\Meetings\Actions\RecordAttendance;
 use Afterburner\Meetings\Actions\UpdateMeeting;
+use Afterburner\Meetings\Actions\UpdateMeetingActionItem;
 use Afterburner\Meetings\Actions\UpdateMeetingMinutes;
+use Afterburner\Meetings\Enums\ActionItemStatus;
 use Afterburner\Meetings\Enums\AttendanceStatus;
 use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Enums\MeetingType;
+use Afterburner\Meetings\Events\MeetingActionItemAssigned;
 use Afterburner\Meetings\Events\MeetingScheduled;
+use Afterburner\Meetings\Exceptions\MeetingsException;
+use Afterburner\Meetings\Listeners\NotifyMeetingAudience;
 use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
 use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Notifications\MeetingScheduledNotification;
 use Afterburner\Meetings\Support\AttendanceRecorderResolver;
 use Afterburner\Meetings\Tests\TestCase;
@@ -22,6 +31,7 @@ use Afterburner\Voting\Enums\BallotType;
 use Afterburner\Voting\Enums\ElectorateType;
 use Afterburner\Voting\Events\BallotPublished;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 
@@ -99,7 +109,7 @@ class MeetingFlowTest extends TestCase
 
         $freshMeeting = $meeting->fresh(['team']);
 
-        app(\Afterburner\Meetings\Listeners\NotifyMeetingAudience::class)
+        app(NotifyMeetingAudience::class)
             ->handle(new MeetingScheduled($freshMeeting));
 
         Notification::assertSentTo($member, MeetingScheduledNotification::class);
@@ -265,11 +275,171 @@ class MeetingFlowTest extends TestCase
         $this->assertSame('published', $meeting->settings['ballot_events'][(string) $ballot->id]['event']);
     }
 
+    public function test_secretary_can_create_and_manage_meeting_action_items(): void
+    {
+        Event::fake([MeetingActionItemAssigned::class]);
+
+        [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
+        $councillor = $this->createAdditionalUser($team, [], 'council@example.com');
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $secretary,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        $actionItem = app(CreateMeetingActionItem::class)->execute(
+            $meeting,
+            $secretary,
+            'Send revised budget to owners',
+            'Include landscaping line item updates.',
+            $councillor->id,
+            now()->addWeek(),
+        );
+
+        $this->assertDatabaseHas('meeting_action_items', [
+            'id' => $actionItem->id,
+            'meeting_id' => $meeting->id,
+            'team_id' => $team->id,
+            'assigned_to_user_id' => $councillor->id,
+            'status' => 'open',
+        ]);
+
+        Event::assertDispatched(MeetingActionItemAssigned::class);
+
+        app(UpdateMeetingActionItem::class)->execute(
+            $actionItem,
+            $secretary,
+            'Send revised budget to owners (v2)',
+            assigneeFieldsProvided: false,
+            dueAtProvided: false,
+            descriptionProvided: false,
+        );
+
+        $this->assertSame('Send revised budget to owners (v2)', $actionItem->fresh()->title);
+
+        app(CompleteMeetingActionItem::class)->execute($actionItem->fresh(), $secretary);
+
+        $completed = $actionItem->fresh();
+        $this->assertSame(ActionItemStatus::Completed, $completed->status);
+        $this->assertNotNull($completed->completed_at);
+
+        app(DeleteMeetingActionItem::class)->execute($completed, $secretary);
+
+        $this->assertDatabaseMissing('meeting_action_items', ['id' => $actionItem->id]);
+    }
+
+    public function test_assignee_can_complete_own_action_item(): void
+    {
+        [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
+        $councillor = $this->createAdditionalUser($team, [], 'council@example.com');
+        $councillor->update(['current_team_id' => $team->id]);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $secretary,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        $actionItem = app(CreateMeetingActionItem::class)->execute(
+            $meeting,
+            $secretary,
+            'Review insurance quote',
+            assignedToUserId: $councillor->id,
+        );
+
+        app(UpdateMeetingActionItem::class)->execute(
+            $actionItem,
+            $councillor,
+            status: ActionItemStatus::InProgress,
+        );
+
+        app(CompleteMeetingActionItem::class)->execute($actionItem->fresh(), $councillor);
+
+        $this->assertSame(ActionItemStatus::Completed, $actionItem->fresh()->status);
+    }
+
+    public function test_assignee_cannot_edit_other_fields_on_action_item(): void
+    {
+        [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
+        $councillor = $this->createAdditionalUser($team, [], 'council@example.com');
+        $councillor->update(['current_team_id' => $team->id]);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $secretary,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        $actionItem = app(CreateMeetingActionItem::class)->execute(
+            $meeting,
+            $secretary,
+            'Book elevator inspection',
+            assignedToUserId: $councillor->id,
+        );
+
+        $this->expectException(MeetingsException::class);
+
+        app(UpdateMeetingActionItem::class)->execute(
+            $actionItem,
+            $councillor,
+            'Changed title',
+        );
+    }
+
+    public function test_meeting_index_counts_overdue_action_items(): void
+    {
+        [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $secretary,
+            'Council meeting',
+            MeetingType::Council,
+            targetRoleSlugs: ['manager'],
+        );
+
+        MeetingActionItem::query()->create([
+            'meeting_id' => $meeting->id,
+            'team_id' => $team->id,
+            'title' => 'Overdue task',
+            'status' => ActionItemStatus::Open,
+            'created_by_user_id' => $secretary->id,
+            'due_at' => now()->subDay(),
+            'sort_order' => 1,
+        ]);
+
+        MeetingActionItem::query()->create([
+            'meeting_id' => $meeting->id,
+            'team_id' => $team->id,
+            'title' => 'Completed task',
+            'status' => ActionItemStatus::Completed,
+            'created_by_user_id' => $secretary->id,
+            'due_at' => now()->subDay(),
+            'completed_at' => now(),
+            'sort_order' => 2,
+        ]);
+
+        $count = Meeting::query()
+            ->forTeam($team->id)
+            ->withCount(['actionItems as overdue_action_items_count' => fn ($query) => $query->overdue()])
+            ->findOrFail($meeting->id)
+            ->overdue_action_items_count;
+
+        $this->assertSame(1, $count);
+    }
+
     protected function assignRole(User $user, string $slug, int $teamId): void
     {
         $roleId = $this->createRoleWithPermissions($slug, ['manage_meetings']);
 
-        \Illuminate\Support\Facades\DB::table('user_role')->insert([
+        DB::table('user_role')->insert([
             'user_id' => $user->id,
             'role_id' => $roleId,
             'team_id' => $teamId,
@@ -280,9 +450,9 @@ class MeetingFlowTest extends TestCase
 
     protected function attachExistingRole(User $user, $team, string $roleSlug): void
     {
-        $roleId = \Illuminate\Support\Facades\DB::table('roles')->where('slug', $roleSlug)->value('id');
+        $roleId = DB::table('roles')->where('slug', $roleSlug)->value('id');
 
-        \Illuminate\Support\Facades\DB::table('user_role')->insert([
+        DB::table('user_role')->insert([
             'user_id' => $user->id,
             'role_id' => $roleId,
             'team_id' => is_object($team) ? $team->id : $team,

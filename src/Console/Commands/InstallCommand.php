@@ -22,12 +22,6 @@ class InstallCommand extends Command
             '--force' => true,
         ]);
 
-        $this->info('Publishing migrations...');
-        $this->call('vendor:publish', [
-            '--tag' => 'afterburner-meetings-migrations',
-            '--force' => true,
-        ]);
-
         $this->info('Publishing views...');
         $this->call('vendor:publish', [
             '--tag' => 'afterburner-meetings-assets',
@@ -54,6 +48,7 @@ class InstallCommand extends Command
         $this->comment('Next steps:');
         $this->comment('1. Add the HasMeetings trait to App\\Models\\Team');
         $this->comment('2. Visit /teams/{team}/meetings to start using meetings');
+        $this->comment('Note: Meetings migrations load automatically from the package.');
 
         return Command::SUCCESS;
     }

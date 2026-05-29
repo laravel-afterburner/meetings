@@ -73,6 +73,11 @@ class Meeting extends Model
         return $this->hasMany(MeetingBallot::class);
     }
 
+    public function actionItems(): HasMany
+    {
+        return $this->hasMany(MeetingActionItem::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     /**
      * @return Collection<int, User>
      */

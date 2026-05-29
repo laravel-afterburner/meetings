@@ -27,6 +27,8 @@ class Index extends Component
             abort(403, 'Access denied.');
         }
 
+        abort_unless(Auth::user()->can('viewAny', Meeting::class), 403);
+
         $this->teamId = $team->id;
     }
 
@@ -57,7 +59,11 @@ class Index extends Component
             default => $query,
         };
 
-        $meetings = $query->orderByDesc('scheduled_at')->orderByDesc('created_at')->paginate(15);
+        $meetings = $query
+            ->withCount(['actionItems as overdue_action_items_count' => fn ($actionItems) => $actionItems->overdue()])
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('created_at')
+            ->paginate(15);
 
         return view('afterburner-meetings::meetings.livewire.index', [
             'team' => $team,

@@ -3,20 +3,29 @@
 namespace Afterburner\Meetings\Providers;
 
 use Afterburner\Meetings\Console\Commands\InstallCommand;
+use Afterburner\Meetings\Contracts\MeetingMinutesAttendanceSummaryProvider;
+use Afterburner\Meetings\Database\Seeders\MeetingsPermissionsSeeder;
+use Afterburner\Meetings\Events\MeetingActionItemAssigned;
+use Afterburner\Meetings\Listeners\NotifyMeetingActionItemAssignee;
 use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
 use Afterburner\Meetings\Livewire\Meetings\Create;
 use Afterburner\Meetings\Livewire\Meetings\Index;
+use Afterburner\Meetings\Livewire\Meetings\MeetingActionItems;
 use Afterburner\Meetings\Livewire\Meetings\MeetingBallots;
 use Afterburner\Meetings\Livewire\Meetings\MeetingDocuments;
 use Afterburner\Meetings\Livewire\Meetings\Show;
 use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Policies\MeetingActionItemPolicy;
 use Afterburner\Meetings\Policies\MeetingPolicy;
+use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Support\DocumentsIntegration;
 use Afterburner\Meetings\Support\VotingIntegration;
 use Afterburner\Voting\Events\BallotClosed;
 use Afterburner\Voting\Events\BallotPublished;
 use App\Models\Team;
 use App\Support\Navigation;
+use App\Support\PackageSeederRegistry;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -33,6 +42,14 @@ class MeetingsServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__.'/../../config/afterburner-meetings.php',
             'afterburner-meetings'
+        );
+
+        $this->app->singleton(
+            MeetingMinutesAttendanceSummaryProvider::class,
+            fn ($app) => $app->make(config(
+                'afterburner-meetings.minutes_attendance_summary_provider',
+                DefaultMeetingMinutesAttendanceSummaryProvider::class
+            ))
         );
     }
 
@@ -67,6 +84,8 @@ class MeetingsServiceProvider extends ServiceProvider
         $this->registerAuditSkipRoutes();
         $this->registerNavigation();
         $this->registerVotingEventListeners();
+        $this->registerActionItemEventListeners();
+        $this->registerPackageSeeder();
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -80,6 +99,7 @@ class MeetingsServiceProvider extends ServiceProvider
         Livewire::component('meetings.index', Index::class);
         Livewire::component('meetings.show', Show::class);
         Livewire::component('meetings.create', Create::class);
+        Livewire::component('meetings.meeting-action-items', MeetingActionItems::class);
 
         if (DocumentsIntegration::isAvailable()) {
             Livewire::component('meetings.meeting-documents', MeetingDocuments::class);
@@ -93,6 +113,7 @@ class MeetingsServiceProvider extends ServiceProvider
     protected function registerPolicies(): void
     {
         Gate::policy(Meeting::class, MeetingPolicy::class);
+        Gate::policy(MeetingActionItem::class, MeetingActionItemPolicy::class);
     }
 
     protected function registerAuditSkipRoutes(): void
@@ -151,5 +172,20 @@ class MeetingsServiceProvider extends ServiceProvider
 
         Event::listen(BallotPublished::class, SyncMeetingBallotContext::class);
         Event::listen(BallotClosed::class, SyncMeetingBallotContext::class);
+    }
+
+    protected function registerActionItemEventListeners(): void
+    {
+        Event::listen(
+            MeetingActionItemAssigned::class,
+            NotifyMeetingActionItemAssignee::class
+        );
+    }
+
+    protected function registerPackageSeeder(): void
+    {
+        if (class_exists(PackageSeederRegistry::class)) {
+            PackageSeederRegistry::register(MeetingsPermissionsSeeder::class);
+        }
     }
 }

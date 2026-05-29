@@ -23,4 +23,13 @@ class DocumentsIntegration
 
         return static::isAvailable();
     }
+
+    public static function shouldPromptInstall(): bool
+    {
+        if (! config('afterburner-meetings.documents_enabled', true)) {
+            return false;
+        }
+
+        return ! static::isAvailable();
+    }
 }

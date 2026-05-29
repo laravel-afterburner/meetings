@@ -24,6 +24,7 @@ abstract class TestCase extends BaseTestCase
             'afterburner-meetings.enabled' => true,
             'afterburner-meetings.voting_enabled' => true,
             'afterburner-meetings.documents_enabled' => true,
+            'afterburner-subscriptions.enabled' => false,
             'afterburner-meetings.default_target_roles_by_type' => [
                 'agm' => ['manager'],
                 'council' => ['manager'],
@@ -84,6 +85,7 @@ abstract class TestCase extends BaseTestCase
             ['name' => 'Manage Meetings', 'slug' => 'manage_meetings', 'description' => null, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Vote Resolutions', 'slug' => 'vote_resolutions', 'description' => null, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Create Resolutions', 'slug' => 'create_resolutions', 'description' => null, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'View Ballot Results', 'slug' => 'view_ballot_results', 'description' => null, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'View Documents', 'slug' => 'view_documents', 'description' => null, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Create Documents', 'slug' => 'create_documents', 'description' => null, 'created_at' => $now, 'updated_at' => $now],
         ];

@@ -2,6 +2,7 @@
 
 namespace Afterburner\Meetings\Livewire\Meetings;
 
+use Afterburner\Meetings\Actions\BuildMeetingMinutesDraft;
 use Afterburner\Meetings\Actions\RecordAttendance;
 use Afterburner\Meetings\Actions\RemoveAttendance;
 use Afterburner\Meetings\Actions\UpdateMeeting;
@@ -9,9 +10,12 @@ use Afterburner\Meetings\Actions\UpdateMeetingMinutes;
 use Afterburner\Meetings\Enums\AttendanceStatus;
 use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\AttendanceRecorderResolver;
 use Afterburner\Meetings\Support\DocumentsIntegration;
+use Afterburner\Meetings\Support\MinutesTemplate;
 use Afterburner\Meetings\Support\TeamDateTime;
+use Afterburner\Meetings\Support\TeamPermissionGate;
 use Afterburner\Meetings\Support\VotingIntegration;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;
@@ -102,6 +106,41 @@ class Show extends Component
         $this->banner($finalize ? __('Meeting minutes finalized.') : __('Meeting minutes saved.'));
     }
 
+    public function generateMinutesDraft(): void
+    {
+        abort_unless(Auth::user()->can('recordMinutes', $this->meeting()), 403);
+        abort_unless($this->meeting()->minutesAreEditable(), 422);
+
+        $this->minutes = app(BuildMeetingMinutesDraft::class)->execute(
+            $this->meeting(),
+            Auth::user(),
+        );
+
+        $this->banner(__('Minutes draft generated from meeting data.'));
+    }
+
+    public function insertMinutesSection(string $section): void
+    {
+        abort_unless(Auth::user()->can('recordMinutes', $this->meeting()), 403);
+        abort_unless($this->meeting()->minutesAreEditable(), 422);
+
+        $text = app(BuildMeetingMinutesDraft::class)->section(
+            $this->meeting(),
+            $section,
+            Auth::user(),
+        );
+
+        if (blank($text)) {
+            $this->banner(__('No content available for that section.'));
+
+            return;
+        }
+
+        $this->minutes = filled($this->minutes)
+            ? rtrim($this->minutes)."\n\n".$text
+            : $text;
+    }
+
     protected function meeting(): Meeting
     {
         return Meeting::query()
@@ -124,17 +163,35 @@ class Show extends Component
             'meeting' => $meeting,
             'invitedUsers' => $invitedUsers,
             'attendanceByUser' => $attendanceByUser,
-            'canManage' => Auth::user()->hasPermission('manage_meetings', $team->id),
+            'canManage' => TeamPermissionGate::allows(Auth::user(), $team->id, 'manage_meetings'),
             'canRecordAttendance' => Auth::user()->can('manageAttendance', $meeting),
             'canRecordMinutes' => Auth::user()->can('recordMinutes', $meeting),
             'canEdit' => Auth::user()->can('update', $meeting),
             'canLinkBallots' => Auth::user()->can('linkBallots', $meeting),
             'attendanceRecorder' => $recorder,
             'documentsEnabled' => DocumentsIntegration::isEnabled(),
+            'documentsInstallPrompt' => DocumentsIntegration::shouldPromptInstall(),
             'votingEnabled' => VotingIntegration::isEnabled(),
             'linkedBallots' => VotingIntegration::isEnabled() ? $meeting->linkedBallots() : collect(),
             'ballotEvents' => $ballotEvents,
             'scheduledDisplay' => TeamDateTime::format($team, $meeting->scheduled_at),
+            'canViewActionItems' => $this->canViewActionItems($meeting),
+            'minutesSections' => app(MinutesTemplate::class)->sections(),
         ]);
+    }
+
+    protected function canViewActionItems(Meeting $meeting): bool
+    {
+        $user = Auth::user();
+
+        if ($user->can('create', [MeetingActionItem::class, $meeting])) {
+            return true;
+        }
+
+        return MeetingActionItem::query()
+            ->where('meeting_id', $meeting->id)
+            ->where('team_id', $meeting->team_id)
+            ->assignedTo($user->id)
+            ->exists();
     }
 }

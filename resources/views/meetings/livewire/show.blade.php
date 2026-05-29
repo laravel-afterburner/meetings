@@ -84,6 +84,8 @@
         <div class="mt-8">
             @livewire('meetings.meeting-documents', ['teamId' => $team->id, 'meetingId' => $meeting->id], key('meeting-documents-show-'.$meeting->id))
         </div>
+    @elseif ($documentsInstallPrompt)
+        @include('afterburner-meetings::components.documents-install-prompt', ['context' => 'meeting', 'class' => 'mt-8'])
     @endif
 
     <div class="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -147,6 +149,12 @@
         </div>
     </div>
 
+    <div class="mt-8">
+        @if ($canViewActionItems ?? false)
+            @livewire('meetings.meeting-action-items', ['teamId' => $team->id, 'meetingId' => $meeting->id], key('meeting-action-items-'.$meeting->id))
+        @endif
+    </div>
+
     <div class="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex items-center justify-between gap-3">
             <div>
@@ -163,6 +171,16 @@
         </div>
 
         @if ($canRecordMinutes && $meeting->minutesAreEditable())
+            <div class="mt-4 flex flex-wrap gap-2">
+                <x-secondary-button type="button" wire:click="generateMinutesDraft" no-spinner>
+                    Generate draft from meeting data
+                </x-secondary-button>
+                @foreach ($minutesSections ?? [] as $sectionKey => $section)
+                    <x-secondary-button type="button" wire:click="insertMinutesSection('{{ $sectionKey }}')" no-spinner>
+                        Insert {{ $section['label'] }}
+                    </x-secondary-button>
+                @endforeach
+            </div>
             <textarea wire:model="minutes" rows="8"
                       class="mt-4 block w-full rounded-md border-gray-300 shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"></textarea>
             <div class="mt-4 flex flex-wrap justify-end gap-3">

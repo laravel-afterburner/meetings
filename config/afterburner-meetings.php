@@ -1,5 +1,7 @@
 <?php
 
+use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
+
 return [
 
     'enabled' => env('AFTERBURNER_MEETINGS_ENABLED', true),
@@ -40,6 +42,38 @@ return [
         'vice_president',
         'organizer',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Minutes template sections
+    |--------------------------------------------------------------------------
+    |
+    | Reusable sections that can be merged into an editable minutes draft.
+    | Host apps can override labels or disable sections in published config.
+    |
+    */
+    'minutes_template' => [
+        'sections' => [
+            'attendance_summary' => [
+                'label' => 'Attendance summary',
+                'enabled' => true,
+            ],
+            'quorum' => [
+                'label' => 'Quorum',
+                'enabled' => true,
+            ],
+            'resolutions' => [
+                'label' => 'Resolutions',
+                'enabled' => true,
+            ],
+            'action_items' => [
+                'label' => 'Action items',
+                'enabled' => true,
+            ],
+        ],
+    ],
+
+    'minutes_attendance_summary_provider' => DefaultMeetingMinutesAttendanceSummaryProvider::class,
 
     'audit' => [
         'skip_routes' => [],

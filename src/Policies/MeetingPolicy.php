@@ -4,6 +4,8 @@ namespace Afterburner\Meetings\Policies;
 
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\AttendanceRecorderResolver;
+use Afterburner\Meetings\Support\SubscriptionEntitlementGate;
+use Afterburner\Meetings\Support\TeamPermissionGate;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -14,13 +16,20 @@ class MeetingPolicy
 
     public function viewAny(User $user): bool
     {
-        return (bool) $user->currentTeam?->id
-            && $user->belongsToTeam($user->currentTeam);
+        if (! $user->currentTeam?->id || ! $user->belongsToTeam($user->currentTeam)) {
+            return false;
+        }
+
+        return SubscriptionEntitlementGate::allows($user->currentTeam);
     }
 
     public function view(User $user, Meeting $meeting): bool
     {
-        return $this->belongsToMeetingTeam($user, $meeting);
+        if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        return SubscriptionEntitlementGate::allows($meeting->team);
     }
 
     public function create(User $user, Team $team): bool
@@ -29,7 +38,11 @@ class MeetingPolicy
             return false;
         }
 
-        return $user->hasPermission('manage_meetings', $team->id);
+        if (! SubscriptionEntitlementGate::allows($team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $team->id, 'manage_meetings');
     }
 
     public function update(User $user, Meeting $meeting): bool
@@ -38,7 +51,11 @@ class MeetingPolicy
             return false;
         }
 
-        return $user->hasPermission('manage_meetings', $meeting->team_id)
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
             && $meeting->isEditable();
     }
 
@@ -48,12 +65,20 @@ class MeetingPolicy
             return false;
         }
 
-        return $user->hasPermission('manage_meetings', $meeting->team_id);
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings');
     }
 
     public function manageAttendance(User $user, Meeting $meeting): bool
     {
         if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
             return false;
         }
 
@@ -71,7 +96,11 @@ class MeetingPolicy
             return false;
         }
 
-        return $user->hasPermission('manage_meetings', $meeting->team_id);
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings');
     }
 
     public function attachDocuments(User $user, Meeting $meeting): bool
@@ -80,7 +109,11 @@ class MeetingPolicy
             return false;
         }
 
-        return $user->hasPermission('manage_meetings', $meeting->team_id)
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
             && $meeting->isEditable();
     }
 

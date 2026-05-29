@@ -34,9 +34,16 @@
                             @endif
                         </p>
                     </div>
-                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                        {{ $meeting->status->label() }}
-                    </span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        @if (($meeting->overdue_action_items_count ?? 0) > 0)
+                            <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                                {{ $meeting->overdue_action_items_count }} overdue
+                            </span>
+                        @endif
+                        <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                            {{ $meeting->status->label() }}
+                        </span>
+                    </div>
                 </div>
             </a>
         @empty
