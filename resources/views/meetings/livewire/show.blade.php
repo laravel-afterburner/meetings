@@ -24,9 +24,9 @@
 
             <div class="flex flex-wrap gap-2">
                 @if ($canEdit)
-                    <x-secondary-button type="button" wire:click="$redirectRoute('teams.meetings.edit', ['team' => $team->id, 'meeting' => $meeting->id])">
-                        Edit
-                    </x-secondary-button>
+                    <x-button type="button" wire:click="$redirectRoute('teams.meetings.edit', ['team' => $team->id, 'meeting' => $meeting->id])" no-spinner>
+                        Edit meeting
+                    </x-button>
                 @endif
                 @if ($canManage && $meeting->status === \Afterburner\Meetings\Enums\MeetingStatus::Scheduled)
                     <x-button type="button" wire:click="updateStatus('in_progress')" no-spinner>

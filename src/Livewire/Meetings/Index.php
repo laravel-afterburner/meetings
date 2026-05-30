@@ -47,6 +47,16 @@ class Index extends Component
         return $this->redirectRoute('teams.meetings.create', ['team' => $this->teamId]);
     }
 
+    public function viewMeeting(int $meetingId)
+    {
+        return $this->redirectRoute('teams.meetings.show', ['team' => $this->teamId, 'meeting' => $meetingId]);
+    }
+
+    public function editMeeting(int $meetingId)
+    {
+        return $this->redirectRoute('teams.meetings.edit', ['team' => $this->teamId, 'meeting' => $meetingId]);
+    }
+
     public function render()
     {
         $team = Team::query()->findOrFail($this->teamId);
