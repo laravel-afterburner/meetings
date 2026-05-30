@@ -6,6 +6,10 @@ return [
 
     'enabled' => env('AFTERBURNER_MEETINGS_ENABLED', true),
 
+    'calendar' => [
+        'enabled' => env('AFTERBURNER_MEETINGS_CALENDAR_ENABLED', true),
+    ],
+
     'documents_enabled' => env('AFTERBURNER_MEETINGS_DOCUMENTS_ENABLED', true),
 
     'voting_enabled' => env('AFTERBURNER_MEETINGS_VOTING_ENABLED', true),

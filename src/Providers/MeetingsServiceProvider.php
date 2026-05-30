@@ -8,14 +8,17 @@ use Afterburner\Meetings\Database\Seeders\MeetingsPermissionsSeeder;
 use Afterburner\Meetings\Events\MeetingActionItemAssigned;
 use Afterburner\Meetings\Listeners\NotifyMeetingActionItemAssignee;
 use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
+use Afterburner\Meetings\Livewire\Meetings\Calendar;
 use Afterburner\Meetings\Livewire\Meetings\Create;
 use Afterburner\Meetings\Livewire\Meetings\Index;
 use Afterburner\Meetings\Livewire\Meetings\MeetingActionItems;
 use Afterburner\Meetings\Livewire\Meetings\MeetingBallots;
 use Afterburner\Meetings\Livewire\Meetings\MeetingDocuments;
 use Afterburner\Meetings\Livewire\Meetings\Show;
+use Afterburner\Meetings\Models\CalendarEvent;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Policies\CalendarEventPolicy;
 use Afterburner\Meetings\Policies\MeetingActionItemPolicy;
 use Afterburner\Meetings\Policies\MeetingPolicy;
 use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
@@ -99,6 +102,7 @@ class MeetingsServiceProvider extends ServiceProvider
     protected function registerLivewireComponents(): void
     {
         Livewire::component('meetings.index', Index::class);
+        Livewire::component('meetings.calendar', Calendar::class);
         Livewire::component('meetings.show', Show::class);
         Livewire::component('meetings.create', Create::class);
         Livewire::component('meetings.meeting-action-items', MeetingActionItems::class);
@@ -115,6 +119,7 @@ class MeetingsServiceProvider extends ServiceProvider
     protected function registerPolicies(): void
     {
         Gate::policy(Meeting::class, MeetingPolicy::class);
+        Gate::policy(CalendarEvent::class, CalendarEventPolicy::class);
         Gate::policy(MeetingActionItem::class, MeetingActionItemPolicy::class);
     }
 
@@ -140,30 +145,68 @@ class MeetingsServiceProvider extends ServiceProvider
             return;
         }
 
+        if (! config('afterburner-meetings.calendar.enabled', true)) {
+            Navigation::register([
+                'label' => 'Meetings',
+                'route' => 'teams.meetings.index',
+                'route_params' => fn () => $this->currentTeamRouteParams(),
+                'icon' => 'user-group',
+                'order' => 20,
+                'permission' => fn ($user) => $this->canViewMeetings($user),
+                'active' => fn () => request()->routeIs('teams.meetings.*'),
+            ]);
+
+            return;
+        }
+
         Navigation::register([
             'label' => 'Meetings',
-            'route' => 'teams.meetings.index',
-            'route_params' => function () {
-                $user = auth()->user();
-                if (! $user || ! $user->currentTeam) {
-                    return [];
-                }
-
-                return ['team' => $user->currentTeam->id];
-            },
             'icon' => 'user-group',
             'order' => 20,
-            'permission' => function ($user) {
-                if (! $user || ! $user->currentTeam) {
-                    return false;
-                }
-
-                return $user->can('viewAny', Meeting::class);
-            },
-            'active' => function () {
-                return request()->routeIs('teams.meetings.*');
-            },
+            'permission' => fn ($user) => $this->canViewMeetings($user),
+            'active' => fn () => request()->routeIs('teams.meetings.*'),
+            'children' => [
+                [
+                    'label' => 'All meetings',
+                    'route' => 'teams.meetings.index',
+                    'route_params' => fn () => $this->currentTeamRouteParams(),
+                    'active' => fn () => request()->routeIs(
+                        'teams.meetings.index',
+                        'teams.meetings.show',
+                        'teams.meetings.create',
+                        'teams.meetings.edit'
+                    ),
+                ],
+                [
+                    'label' => 'Calendar',
+                    'route' => 'teams.meetings.calendar',
+                    'route_params' => fn () => $this->currentTeamRouteParams(),
+                    'active' => fn () => request()->routeIs('teams.meetings.calendar'),
+                ],
+            ],
         ]);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    protected function currentTeamRouteParams(): array
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->currentTeam) {
+            return [];
+        }
+
+        return ['team' => $user->currentTeam->id];
+    }
+
+    protected function canViewMeetings(mixed $user): bool
+    {
+        if (! $user || ! $user->currentTeam) {
+            return false;
+        }
+
+        return $user->can('viewAny', Meeting::class);
     }
 
     protected function registerPlaybook(): void
