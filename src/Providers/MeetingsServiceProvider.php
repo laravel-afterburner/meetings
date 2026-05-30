@@ -147,7 +147,7 @@ class MeetingsServiceProvider extends ServiceProvider
 
         if (! config('afterburner-meetings.calendar.enabled', true)) {
             Navigation::register([
-                'label' => 'Meetings',
+                'label' => 'Events',
                 'route' => 'teams.meetings.index',
                 'route_params' => fn () => $this->currentTeamRouteParams(),
                 'icon' => 'user-group',
@@ -160,14 +160,14 @@ class MeetingsServiceProvider extends ServiceProvider
         }
 
         Navigation::register([
-            'label' => 'Meetings',
+            'label' => 'Events',
             'icon' => 'user-group',
             'order' => 20,
             'permission' => fn ($user) => $this->canViewMeetings($user),
             'active' => fn () => request()->routeIs('teams.meetings.*'),
             'children' => [
                 [
-                    'label' => 'All meetings',
+                    'label' => 'Meetings',
                     'route' => 'teams.meetings.index',
                     'route_params' => fn () => $this->currentTeamRouteParams(),
                     'active' => fn () => request()->routeIs(
