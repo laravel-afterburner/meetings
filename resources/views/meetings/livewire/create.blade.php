@@ -1,6 +1,6 @@
 <div>
     <form wire:submit.prevent="saveDraft" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div class="max-w-xl">
+        <div>
             <x-label for="title" value="Title" />
             <x-input id="title" type="text" class="mt-1 block w-full" wire:model="title" required />
             <x-input-error for="title" class="mt-2" />
@@ -35,12 +35,12 @@
             <x-input-error for="scheduledAt" class="mt-2" />
         </div>
 
-        <div class="max-w-xl">
+        <div>
             <x-label for="location" value="Location" />
             <x-input id="location" type="text" class="mt-1 block w-full" wire:model="location" />
         </div>
 
-        <div class="max-w-xl">
+        <div>
             <x-label for="virtualLink" value="Virtual meeting link" />
             <x-input id="virtualLink" type="url" class="mt-1 block w-full" wire:model="virtualLink" placeholder="https://" />
             <x-input-error for="virtualLink" class="mt-2" />
@@ -48,7 +48,7 @@
 
         <div>
             <x-label for="agendaNotes" value="Agenda notes" />
-            <x-textarea-input id="agendaNotes" wire:model="agendaNotes" rows="5" class="mt-1 block w-full max-w-2xl" />
+            <x-textarea-input id="agendaNotes" wire:model="agendaNotes" rows="5" class="mt-1 block w-full" />
         </div>
 
         <div>

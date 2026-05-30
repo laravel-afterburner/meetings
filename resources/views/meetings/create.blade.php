@@ -7,7 +7,7 @@
         @endif
     </x-slot>
 
-    <div class="max-w-4xl mx-auto py-10 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto py-10 sm:px-6 lg:px-8">
         @livewire('meetings.create', array_filter([
             'team' => $team,
             'meetingId' => isset($meeting) ? $meeting->id : null,
