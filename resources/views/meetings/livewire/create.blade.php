@@ -86,6 +86,21 @@
         </div>
     </form>
 
+    @if ($meetingId)
+        <div class="mt-6">
+            @livewire('meetings.meeting-agenda-items', [
+                'teamId' => $team->id,
+                'meetingId' => $meetingId,
+            ], key('meeting-agenda-items-create-'.$meetingId))
+        </div>
+    @else
+        <div class="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-5 dark:border-gray-600 dark:bg-gray-900/40">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+                Save a draft first to build the agenda and link existing records.
+            </p>
+        </div>
+    @endif
+
     @if ($documentsEnabled)
         <div class="mt-6">
             @if ($meetingId)

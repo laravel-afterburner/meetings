@@ -74,10 +74,27 @@ return [
                 'label' => 'Action items',
                 'enabled' => true,
             ],
+            'agenda' => [
+                'label' => 'Agenda',
+                'enabled' => true,
+            ],
         ],
     ],
 
     'minutes_attendance_summary_provider' => DefaultMeetingMinutesAttendanceSummaryProvider::class,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agenda reference providers
+    |--------------------------------------------------------------------------
+    |
+    | Host apps register MeetingReferenceProvider classes here so meetings
+    | can link agenda items to existing records (maintenance issues, etc.).
+    |
+    */
+    'reference_providers' => [
+        //
+    ],
 
     'audit' => [
         'skip_routes' => [],

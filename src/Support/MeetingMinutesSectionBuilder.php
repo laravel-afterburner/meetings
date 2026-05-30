@@ -25,6 +25,7 @@ class MeetingMinutesSectionBuilder
             'quorum' => $this->buildQuorum($meeting),
             'resolutions' => $this->buildResolutions($meeting),
             'action_items' => $this->buildActionItems($meeting),
+            'agenda' => $this->buildAgenda($meeting),
             default => null,
         };
     }
@@ -189,6 +190,35 @@ class MeetingMinutesSectionBuilder
         }
 
         return strtoupper($this->template->label('action_items'))."\n".implode("\n", $lines);
+    }
+
+    protected function buildAgenda(Meeting $meeting): ?string
+    {
+        $meeting->loadMissing(['agendaItems.reference']);
+
+        if ($meeting->agendaItems->isEmpty()) {
+            return null;
+        }
+
+        $lines = [];
+
+        foreach ($meeting->agendaItems as $item) {
+            $line = '- '.$item->title;
+
+            if ($item->section) {
+                $line .= ' ['.$item->section->label().']';
+            }
+
+            $lines[] = $line;
+
+            $summary = $item->displaySummary();
+
+            if (filled($summary)) {
+                $lines[] = '  '.$summary;
+            }
+        }
+
+        return strtoupper($this->template->label('agenda'))."\n".implode("\n", $lines);
     }
 
     protected function formatVoteCount(float $count): string

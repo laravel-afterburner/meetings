@@ -100,7 +100,7 @@ class Create extends Component
 
         if ($wasNew) {
             $this->meetingId = $meeting->id;
-            $this->banner(__('Meeting draft saved. You can attach documents below.'));
+            $this->banner(__('Meeting draft saved. You can build the agenda and attach documents below.'));
 
             return;
         }

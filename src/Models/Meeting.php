@@ -78,6 +78,11 @@ class Meeting extends Model
         return $this->hasMany(MeetingActionItem::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function agendaItems(): HasMany
+    {
+        return $this->hasMany(MeetingAgendaItem::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     /**
      * @return Collection<int, User>
      */

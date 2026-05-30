@@ -49,6 +49,10 @@
         @endif
     </div>
 
+    <div class="mt-8">
+        @livewire('meetings.meeting-agenda-items', ['teamId' => $team->id, 'meetingId' => $meeting->id], key('meeting-agenda-items-show-'.$meeting->id))
+    </div>
+
     @if ($votingEnabled)
         <div class="mt-8">
             @livewire('meetings.meeting-ballots', ['teamId' => $team->id, 'meetingId' => $meeting->id], key('meeting-ballots-'.$meeting->id))

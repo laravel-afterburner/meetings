@@ -12,17 +12,21 @@ use Afterburner\Meetings\Livewire\Meetings\Calendar;
 use Afterburner\Meetings\Livewire\Meetings\Create;
 use Afterburner\Meetings\Livewire\Meetings\Index;
 use Afterburner\Meetings\Livewire\Meetings\MeetingActionItems;
+use Afterburner\Meetings\Livewire\Meetings\MeetingAgendaItems;
 use Afterburner\Meetings\Livewire\Meetings\MeetingBallots;
 use Afterburner\Meetings\Livewire\Meetings\MeetingDocuments;
 use Afterburner\Meetings\Livewire\Meetings\Show;
 use Afterburner\Meetings\Models\CalendarEvent;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Models\MeetingAgendaItem;
 use Afterburner\Meetings\Policies\CalendarEventPolicy;
 use Afterburner\Meetings\Policies\MeetingActionItemPolicy;
+use Afterburner\Meetings\Policies\MeetingAgendaItemPolicy;
 use Afterburner\Meetings\Policies\MeetingPolicy;
 use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Support\DocumentsIntegration;
+use Afterburner\Meetings\Support\MeetingReferenceRegistry;
 use Afterburner\Meetings\Support\VotingIntegration;
 use Afterburner\Playbook\Support\Playbook;
 use Afterburner\Voting\Events\BallotClosed;
@@ -55,6 +59,8 @@ class MeetingsServiceProvider extends ServiceProvider
                 DefaultMeetingMinutesAttendanceSummaryProvider::class
             ))
         );
+
+        $this->app->singleton(MeetingReferenceRegistry::class);
     }
 
     public function boot(): void
@@ -85,6 +91,7 @@ class MeetingsServiceProvider extends ServiceProvider
 
         $this->registerLivewireComponents();
         $this->registerPolicies();
+        $this->registerMeetingReferenceProviders();
         $this->registerAuditSkipRoutes();
         $this->registerNavigation();
         $this->registerPlaybook();
@@ -106,6 +113,7 @@ class MeetingsServiceProvider extends ServiceProvider
         Livewire::component('meetings.show', Show::class);
         Livewire::component('meetings.create', Create::class);
         Livewire::component('meetings.meeting-action-items', MeetingActionItems::class);
+        Livewire::component('meetings.meeting-agenda-items', MeetingAgendaItems::class);
 
         if (DocumentsIntegration::isAvailable()) {
             Livewire::component('meetings.meeting-documents', MeetingDocuments::class);
@@ -121,6 +129,20 @@ class MeetingsServiceProvider extends ServiceProvider
         Gate::policy(Meeting::class, MeetingPolicy::class);
         Gate::policy(CalendarEvent::class, CalendarEventPolicy::class);
         Gate::policy(MeetingActionItem::class, MeetingActionItemPolicy::class);
+        Gate::policy(MeetingAgendaItem::class, MeetingAgendaItemPolicy::class);
+    }
+
+    protected function registerMeetingReferenceProviders(): void
+    {
+        $registry = $this->app->make(MeetingReferenceRegistry::class);
+
+        foreach (config('afterburner-meetings.reference_providers', []) as $providerClass) {
+            if (! is_string($providerClass) || ! class_exists($providerClass)) {
+                continue;
+            }
+
+            $registry->register($this->app->make($providerClass));
+        }
     }
 
     protected function registerAuditSkipRoutes(): void
