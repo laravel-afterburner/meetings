@@ -1,13 +1,13 @@
-<x-app-layout :title="\Afterburner\Meetings\Support\PageHeader::make('Events', isset($meeting) ? 'Edit' : 'Create meeting', isset($meeting) ? $meeting->title : null)">
+<x-app-layout :title="\Afterburner\Meetings\Support\PageHeader::make('Meeting', isset($meeting) ? 'Edit' : 'Create meeting', isset($meeting) ? $meeting->title : null)">
     <x-slot name="header">
         @if (isset($meeting))
-            <x-afterburner-meetings::page-header section="Events" action="Edit" :detail="$meeting->title" />
+            <x-afterburner-meetings::page-header section="Meeting" action="Edit" :detail="$meeting->title" />
         @else
-            <x-afterburner-meetings::page-header section="Events" action="Create meeting" />
+            <x-afterburner-meetings::page-header section="Meeting" action="Create meeting" />
         @endif
     </x-slot>
 
-    <div class="max-w-2xl mx-auto py-10 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
         @livewire('meetings.create', array_filter([
             'team' => $team,
             'meetingId' => isset($meeting) ? $meeting->id : null,

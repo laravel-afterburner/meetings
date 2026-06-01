@@ -25,6 +25,14 @@ Route::middleware(['web', 'auth', 'verified'])->group(function () {
         ->name('teams.meetings.show')
         ->whereNumber('meeting');
 
+    Route::get('/teams/{team}/meetings/{meeting}/in-progress', [MeetingsController::class, 'inProgress'])
+        ->name('teams.meetings.in-progress')
+        ->whereNumber('meeting');
+
+    Route::get('/teams/{team}/meetings/{meeting}/completed', [MeetingsController::class, 'completed'])
+        ->name('teams.meetings.completed')
+        ->whereNumber('meeting');
+
     Route::get('/teams/{team}/meetings/{meeting}/edit', [MeetingsController::class, 'edit'])
         ->name('teams.meetings.edit')
         ->middleware('can:update,meeting')

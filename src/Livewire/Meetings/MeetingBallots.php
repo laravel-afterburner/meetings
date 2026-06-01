@@ -20,6 +20,10 @@ class MeetingBallots extends Component
 
     public int $meetingId;
 
+    public bool $readOnly = false;
+
+    public bool $embedded = false;
+
     public bool $showLinkModal = false;
 
     public string $ballotSearch = '';
@@ -88,6 +92,10 @@ class MeetingBallots extends Component
 
     protected function canLinkBallots(): bool
     {
+        if ($this->readOnly) {
+            return false;
+        }
+
         return Auth::user()->can('linkBallots', $this->meeting());
     }
 
@@ -117,6 +125,7 @@ class MeetingBallots extends Component
             'availableBallots' => $availableBallots,
             'canLinkBallots' => $this->canLinkBallots(),
             'ballotEvents' => $ballotEvents,
+            'embedded' => $this->embedded,
         ]);
     }
 }

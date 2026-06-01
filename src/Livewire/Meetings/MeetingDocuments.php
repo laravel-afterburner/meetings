@@ -7,6 +7,7 @@ use Afterburner\Meetings\Actions\AttachDocumentToMeeting;
 use Afterburner\Meetings\Actions\DetachDocumentFromMeeting;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\DocumentsIntegration;
+use Afterburner\Meetings\Support\MeetingsDocumentLinkUi;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,10 @@ class MeetingDocuments extends Component
     public int $teamId;
 
     public int $meetingId;
+
+    public bool $readOnly = false;
+
+    public bool $embedded = false;
 
     public bool $showAttachModal = false;
 
@@ -70,7 +75,6 @@ class MeetingDocuments extends Component
         try {
             app(AttachDocumentToMeeting::class)->execute($meeting, $document, Auth::user());
             $this->banner(__('Document attached to meeting.'));
-            $this->closeAttachModal();
         } catch (\Throwable $exception) {
             $this->dangerBanner($exception->getMessage());
         }
@@ -131,30 +135,40 @@ class MeetingDocuments extends Component
 
     protected function canManageDocuments(): bool
     {
+        if ($this->readOnly) {
+            return false;
+        }
+
         return Auth::user()->can('attachDocuments', $this->meeting());
+    }
+
+    protected function searchDocuments()
+    {
+        if (! $this->showAttachModal || ! MeetingsDocumentLinkUi::searchIsActive($this->documentSearch)) {
+            return collect();
+        }
+
+        $meeting = $this->meeting();
+        $linkedDocumentIds = $meeting->linkedDocuments()->pluck('documents.id');
+        $term = '%'.trim($this->documentSearch).'%';
+
+        return Document::query()
+            ->forTeam($this->teamId)
+            ->where('upload_status', 'completed')
+            ->when($linkedDocumentIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $linkedDocumentIds))
+            ->where(function ($query) use ($term) {
+                $query->where('name', 'like', $term)
+                    ->orWhere('filename', 'like', $term);
+            })
+            ->orderBy('name')
+            ->limit(25)
+            ->get();
     }
 
     public function render()
     {
         $meeting = $this->meeting()->load(['linkedDocuments.uploader']);
         $team = Team::query()->findOrFail($this->teamId);
-
-        $linkedDocumentIds = $meeting->linkedDocuments->pluck('id');
-
-        $availableDocuments = Document::query()
-            ->forTeam($this->teamId)
-            ->where('upload_status', 'completed')
-            ->when($linkedDocumentIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $linkedDocumentIds))
-            ->when(filled($this->documentSearch), function ($query) {
-                $term = '%'.$this->documentSearch.'%';
-                $query->where(function ($inner) use ($term) {
-                    $inner->where('name', 'like', $term)
-                        ->orWhere('filename', 'like', $term);
-                });
-            })
-            ->orderBy('name')
-            ->limit(25)
-            ->get();
 
         $previewDocument = null;
         $previewUrl = null;
@@ -173,10 +187,12 @@ class MeetingDocuments extends Component
             'team' => $team,
             'meeting' => $meeting,
             'linkedDocuments' => $meeting->linkedDocuments,
-            'availableDocuments' => $availableDocuments,
+            'searchDocuments' => $this->searchDocuments(),
+            'searchIsActive' => MeetingsDocumentLinkUi::searchIsActive($this->documentSearch),
             'canManageDocuments' => $this->canManageDocuments(),
             'previewDocument' => $previewDocument,
             'previewUrl' => $previewUrl,
+            'embedded' => $this->embedded,
         ]);
     }
 }

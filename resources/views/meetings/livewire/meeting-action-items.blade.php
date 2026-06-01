@@ -1,23 +1,29 @@
 <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Action items</h4>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                @if ($canManageActionItems)
-                    Follow-up tasks from this meeting. Assign council members and track completion.
-                @else
-                    Action items assigned to you from this meeting.
-                @endif
-            </p>
-        </div>
+    @if (! $embedded || $canManageActionItems)
+    <div class="flex flex-wrap items-center justify-between gap-3 {{ $embedded ? 'justify-end' : '' }}">
+        @unless ($embedded)
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Action items</h4>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    @if ($readOnly)
+                        Follow-up tasks recorded for this meeting.
+                    @elseif ($canManageActionItems)
+                        Follow-up tasks from this meeting. Assign council members and track completion.
+                    @else
+                        Action items assigned to you from this meeting.
+                    @endif
+                </p>
+            </div>
+        @endunless
         @if ($canManageActionItems)
             <x-secondary-button type="button" wire:click="openCreateModal" no-spinner>
                 Add action item
             </x-secondary-button>
         @endif
     </div>
+    @endif
 
-    <div class="mt-4 space-y-3">
+    <div class="{{ (! $embedded || $canManageActionItems) ? 'mt-4' : '' }} space-y-3">
         @forelse ($actionItems as $actionItem)
             <div class="rounded-md border border-gray-200 px-4 py-3 dark:border-gray-600 {{ $actionItem->isOverdue() ? 'border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20' : '' }}">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -70,7 +76,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
                             </button>
-                        @elseif ($actionItem->status->isOpen())
+                        @elseif (! $readOnly && $actionItem->status->isOpen())
                             <select wire:change="updateStatus({{ $actionItem->id }}, $event.target.value)"
                                     class="rounded-md border-gray-300 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
                                 @foreach ($statusOptions as $option)

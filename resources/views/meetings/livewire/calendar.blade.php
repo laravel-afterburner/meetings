@@ -1,19 +1,51 @@
 <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-            <x-secondary-button type="button" wire:click="previousMonth" no-spinner aria-label="Previous month">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4" wire:key="calendar-toolbar-{{ $month }}">
+        <div
+            class="flex items-center gap-2"
+            x-data="{ cancelSelect() { $dispatch('calendar-cancel-select') } }"
+        >
+            <x-secondary-button type="button" wire:click="previousMonth" x-on:mousedown="cancelSelect()" no-spinner aria-label="Previous month">
                 &larr;
             </x-secondary-button>
-            <x-secondary-button type="button" wire:click="goToToday" no-spinner>
+            <x-secondary-button type="button" wire:click="goToToday" x-on:mousedown="cancelSelect()" no-spinner>
                 Today
             </x-secondary-button>
-            <x-secondary-button type="button" wire:click="nextMonth" no-spinner aria-label="Next month">
+            <x-secondary-button type="button" wire:click="nextMonth" x-on:mousedown="cancelSelect()" no-spinner aria-label="Next month">
                 &rarr;
             </x-secondary-button>
             <h2 class="ml-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {{ $monthLabel }}
             </h2>
             <span class="text-sm text-gray-500 dark:text-gray-400">({{ $timezone }})</span>
+
+            @if ($canChooseDisplayTimezone)
+                <div class="ml-2 inline-flex rounded-md border border-gray-200 p-0.5 dark:border-gray-600" role="group" aria-label="Calendar time zone">
+                    <button
+                        type="button"
+                        wire:click="setDisplayTimezoneMode('user')"
+                        @class([
+                            'rounded px-2 py-1 text-xs font-medium transition',
+                            $displayTimezoneMode === 'user'
+                                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100',
+                        ])
+                    >
+                        My time
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="setDisplayTimezoneMode('team')"
+                        @class([
+                            'rounded px-2 py-1 text-xs font-medium transition',
+                            $displayTimezoneMode === 'team'
+                                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100',
+                        ])
+                    >
+                        Team time
+                    </button>
+                </div>
+            @endif
         </div>
 
         @if ($canCreate)
@@ -24,14 +56,21 @@
     </div>
 
     <div
+        wire:key="calendar-grid-{{ $month }}"
         class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
         x-data="{
             selecting: false,
             anchor: null,
             hover: null,
             canCreate: @js($canCreate),
-            startSelect(date) {
+            cancelSelect() {
+                this.selecting = false;
+                this.anchor = null;
+                this.hover = null;
+            },
+            startSelect(date, event) {
                 if (! this.canCreate) return;
+                if (event.target.closest('button, a')) return;
                 this.selecting = true;
                 this.anchor = date;
                 this.hover = date;
@@ -42,15 +81,13 @@
             },
             finishSelect() {
                 if (! this.selecting || ! this.anchor || ! this.hover) {
-                    this.selecting = false;
+                    this.cancelSelect();
                     return;
                 }
                 const start = this.anchor <= this.hover ? this.anchor : this.hover;
                 const end = this.anchor <= this.hover ? this.hover : this.anchor;
                 $wire.openCreateForRange(start, end);
-                this.selecting = false;
-                this.anchor = null;
-                this.hover = null;
+                this.cancelSelect();
             },
             isSelected(date) {
                 if (! this.selecting || ! this.anchor || ! this.hover) return false;
@@ -59,7 +96,9 @@
                 return date >= start && date <= end;
             }
         }"
+        x-on:calendar-cancel-select.window="cancelSelect()"
         x-on:mouseup.window="finishSelect()"
+        x-on:calendar-scroll-to-month-start.window="$nextTick(() => document.getElementById('calendar-month-anchor')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))"
     >
         <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
             @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $weekday)
@@ -69,10 +108,11 @@
 
         @foreach ($weeks as $weekIndex => $week)
             @php
+                $weekKey = $week['days'][0]['date'];
                 $laneCount = max($week['laneCount'], 1);
                 $barAreaHeight = $week['laneCount'] > 0 ? ($week['laneCount'] * 1.375 + 0.25).'rem' : '0.25rem';
             @endphp
-            <div wire:key="calendar-week-{{ $weekIndex }}" class="relative grid grid-cols-7 border-b border-gray-200 last:border-b-0 dark:border-gray-700">
+            <div wire:key="calendar-week-{{ $weekKey }}" class="relative grid grid-cols-7 border-b border-gray-200 last:border-b-0 dark:border-gray-700">
                 @foreach ($week['days'] as $day)
                     @php
                         $dayCellClasses = 'min-h-[9rem] border-r border-gray-200 p-2 last:border-r-0 dark:border-gray-700';
@@ -82,9 +122,10 @@
                     @endphp
                     <div
                         wire:key="calendar-day-{{ $day['date'] }}"
+                        @if ($day['date'] === $monthAnchorDate) id="calendar-month-anchor" @endif
                         class="{{ $dayCellClasses }}"
                         :class="{ 'bg-indigo-50 dark:bg-indigo-950/30': isSelected('{{ $day['date'] }}') }"
-                        x-on:mousedown.prevent="startSelect('{{ $day['date'] }}')"
+                        x-on:mousedown.prevent="startSelect('{{ $day['date'] }}', $event)"
                         x-on:mouseenter="extendSelect('{{ $day['date'] }}')"
                     >
                         @if ($canCreate)
@@ -136,9 +177,22 @@
                                         ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-100 dark:hover:bg-blue-900/70'
                                         : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100 dark:hover:bg-emerald-900/70';
                                     $clickAction = $isMeeting
-                                        ? 'viewMeeting('.str_replace('meeting-', '', $entry->id).')'
+                                        ? null
                                         : 'openEditEvent('.(int) str_replace('event-', '', $entry->id).')';
                                 @endphp
+                                @if ($isMeeting)
+                                    <a
+                                        href="{{ $entry->url }}"
+                                        wire:navigate
+                                        wire:key="calendar-timed-{{ $day['date'] }}-{{ $entry->id }}-{{ $timed['lane'] }}-{{ $timed['column'] }}"
+                                        class="absolute truncate rounded px-1 py-0.5 text-left text-[11px] leading-4 {{ $chipClasses }}"
+                                        style="top: {{ $timed['lane'] * $timedRowHeight }}rem; left: calc({{ $columnLeft }}% + 1px); width: calc({{ $columnWidth }}% - 2px);"
+                                        title="{{ $timed['timeRangeLabel'] }} · {{ $entry->title }}"
+                                    >
+                                        <span class="font-semibold">{{ $timed['timeLabel'] }}</span>
+                                        <span class="ml-1">{{ $entry->title }}</span>
+                                    </a>
+                                @else
                                 <button
                                     type="button"
                                     wire:key="calendar-timed-{{ $day['date'] }}-{{ $entry->id }}-{{ $timed['lane'] }}-{{ $timed['column'] }}"
@@ -150,6 +204,7 @@
                                     <span class="font-semibold">{{ $timed['timeLabel'] }}</span>
                                     <span class="ml-1">{{ $entry->title }}</span>
                                 </button>
+                                @endif
                             @endforeach
                         </div>
                     </div>
@@ -173,7 +228,7 @@
                                     .($bar['segmentEnd'] ? 'rounded-r-md' : 'rounded-r-none')
                                 );
                                 $barClick = $isMeeting
-                                    ? 'viewMeeting('.str_replace('meeting-', '', $entry->id).')'
+                                    ? null
                                     : 'openEditEvent('.(int) str_replace('event-', '', $entry->id).')';
                                 if (! $bar['segmentEnd']) {
                                     $barClasses .= $isMeeting
@@ -181,9 +236,25 @@
                                         : ' border-r border-emerald-200 dark:border-emerald-800/60';
                                 }
                             @endphp
+                            @if ($isMeeting)
+                                <a
+                                    href="{{ $entry->url }}"
+                                    wire:navigate
+                                    wire:key="calendar-bar-{{ $weekKey }}-{{ $entry->id }}-{{ $bar['startCol'] }}"
+                                    class="pointer-events-auto h-5 truncate px-1.5 text-left text-[11px] font-medium leading-5 shadow-sm {{ $barClasses }} {{ $roundedClasses }}"
+                                    style="grid-column: {{ $bar['startCol'] + 1 }} / {{ $bar['endCol'] + 2 }}; grid-row: {{ $bar['lane'] + 1 }};"
+                                    title="{{ $entry->title }}"
+                                >
+                                    @if ($bar['showLabel'])
+                                        {{ $entry->title }}
+                                    @else
+                                        <span class="sr-only">{{ $entry->title }}</span>
+                                    @endif
+                                </a>
+                            @else
                             <button
                                 type="button"
-                                wire:key="calendar-bar-{{ $weekIndex }}-{{ $entry->id }}-{{ $bar['startCol'] }}"
+                                wire:key="calendar-bar-{{ $weekKey }}-{{ $entry->id }}-{{ $bar['startCol'] }}"
                                 wire:click.stop="{{ $barClick }}"
                                 class="pointer-events-auto h-5 truncate px-1.5 text-left text-[11px] font-medium leading-5 shadow-sm {{ $barClasses }} {{ $roundedClasses }}"
                                 style="grid-column: {{ $bar['startCol'] + 1 }} / {{ $bar['endCol'] + 2 }}; grid-row: {{ $bar['lane'] + 1 }};"
@@ -195,6 +266,7 @@
                                     <span class="sr-only">{{ $entry->title }}</span>
                                 @endif
                             </button>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -231,9 +303,8 @@
             </x-secondary-button>
         </div>
 
-        <p class="mt-3 break-all text-xs text-gray-500 dark:text-gray-400">{{ $feedUrl }}</p>
-        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            In Google Calendar: Settings &rarr; Add calendar &rarr; From URL, then paste the feed URL above.
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            In Google Calendar: Settings &rarr; Add calendar &rarr; From URL, then paste the copied feed URL.
         </p>
     </div>
 
@@ -267,21 +338,27 @@
                             </div>
                             <div>
                                 <x-label for="endDate" value="End date" />
-                                <x-input id="endDate" type="date" class="mt-1 block w-full" wire:model="endDate" min="{{ $startDate }}" required />
+                                <x-input id="endDate" type="date" class="mt-1 block w-full" wire:model.live="endDate" min="{{ $startDate }}" required />
                                 <x-input-error for="endDate" class="mt-2" />
                             </div>
                         </div>
                     @else
                         <div>
                             <x-label for="startsAtLocal" value="Starts" />
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">({{ $timezone }})</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">({{ $inputTimezone }})</p>
+                            @if ($inputTeamTimezoneHint)
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Team time zone: {{ $inputTeamTimezoneHint }}</p>
+                            @endif
                             <x-input id="startsAtLocal" type="datetime-local" class="mt-1 block w-full" wire:model.live="startsAtLocal" required />
                             <x-input-error for="startsAtLocal" class="mt-2" />
                         </div>
 
                         <div>
                             <x-label for="endsAtLocal" value="Ends" />
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">({{ $timezone }})</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">({{ $inputTimezone }})</p>
+                            @if ($inputTeamTimezoneHint)
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Team time zone: {{ $inputTeamTimezoneHint }}</p>
+                            @endif
                             <x-input id="endsAtLocal" type="datetime-local" class="mt-1 block w-full" wire:model="endsAtLocal" min="{{ $startsAtLocal }}" required />
                             <x-input-error for="endsAtLocal" class="mt-2" />
                         </div>

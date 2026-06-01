@@ -2,8 +2,10 @@
 
 namespace Afterburner\Meetings\Policies;
 
+use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\AttendanceRecorderResolver;
+use Afterburner\Meetings\Support\DocumentsIntegration;
 use Afterburner\Meetings\Support\SubscriptionEntitlementGate;
 use Afterburner\Meetings\Support\TeamPermissionGate;
 use App\Models\Team;
@@ -56,7 +58,7 @@ class MeetingPolicy
         }
 
         return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
-            && $meeting->isEditable();
+            && ($meeting->isEditable() || $meeting->status === MeetingStatus::Completed);
     }
 
     public function delete(User $user, Meeting $meeting): bool
@@ -87,6 +89,19 @@ class MeetingPolicy
 
     public function recordMinutes(User $user, Meeting $meeting): bool
     {
+        if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        if ($meeting->status === MeetingStatus::Completed
+            && TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')) {
+            return true;
+        }
+
         return $this->manageAttendance($user, $meeting);
     }
 
@@ -115,6 +130,71 @@ class MeetingPolicy
 
         return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
             && $meeting->isEditable();
+    }
+
+    public function start(User $user, Meeting $meeting): bool
+    {
+        if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+            && $meeting->status === MeetingStatus::Scheduled;
+    }
+
+    public function conductSession(User $user, Meeting $meeting): bool
+    {
+        if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return $meeting->status === MeetingStatus::InProgress
+            && $this->manageAttendance($user, $meeting);
+    }
+
+    public function complete(User $user, Meeting $meeting): bool
+    {
+        if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+            && $meeting->status === MeetingStatus::InProgress;
+    }
+
+    public function reviseAfterCompletion(User $user, Meeting $meeting): bool
+    {
+        if (! $this->belongsToMeetingTeam($user, $meeting)) {
+            return false;
+        }
+
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+            && $meeting->status === MeetingStatus::Completed;
+    }
+
+    public function compilePackage(User $user, Meeting $meeting): bool
+    {
+        if (! $this->reviseAfterCompletion($user, $meeting)) {
+            return false;
+        }
+
+        return DocumentsIntegration::isEnabled();
     }
 
     protected function belongsToMeetingTeam(User $user, Meeting $meeting): bool

@@ -96,9 +96,29 @@ class CalendarEntry
         return ! $this->allDay && ! $this->spansMultipleDays();
     }
 
+    public function forDisplayTimezone(string $timezone): self
+    {
+        if ($this->allDay) {
+            return $this;
+        }
+
+        return new self(
+            id: $this->id,
+            kind: $this->kind,
+            title: $this->title,
+            startsAt: $this->startsAt->copy()->setTimezone($timezone),
+            endsAt: $this->endsAt->copy()->setTimezone($timezone),
+            allDay: $this->allDay,
+            location: $this->location,
+            description: $this->description,
+            url: $this->url,
+            status: $this->status,
+        );
+    }
+
     public function timeLabel(): string
     {
-        return $this->startsAt->format('g:i A');
+        return TeamDateTime::formatTime($this->startsAt);
     }
 
     public function timeRangeLabel(): string
@@ -107,11 +127,7 @@ class CalendarEntry
             return 'All day';
         }
 
-        if ($this->startsAt->eq($this->endsAt)) {
-            return $this->timeLabel();
-        }
-
-        return $this->startsAt->format('g:i A').' – '.$this->endsAt->format('g:i A');
+        return TeamDateTime::formatTimeRange($this->startsAt, $this->endsAt);
     }
 
     public function effectiveStartsAtOn(Carbon $day): Carbon

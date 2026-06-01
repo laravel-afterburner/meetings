@@ -2,12 +2,14 @@
 
 namespace Afterburner\Meetings\Tests\Feature;
 
+use Afterburner\Meetings\Actions\CompleteMeeting;
 use Afterburner\Meetings\Actions\CompleteMeetingActionItem;
 use Afterburner\Meetings\Actions\CreateMeeting;
 use Afterburner\Meetings\Actions\CreateMeetingActionItem;
 use Afterburner\Meetings\Actions\DeleteMeetingActionItem;
 use Afterburner\Meetings\Actions\LinkBallotToMeeting;
 use Afterburner\Meetings\Actions\RecordAttendance;
+use Afterburner\Meetings\Actions\StartMeeting;
 use Afterburner\Meetings\Actions\UpdateMeeting;
 use Afterburner\Meetings\Actions\UpdateMeetingActionItem;
 use Afterburner\Meetings\Actions\UpdateMeetingMinutes;
@@ -22,6 +24,7 @@ use Afterburner\Meetings\Listeners\NotifyMeetingAudience;
 use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Notifications\MeetingActionItemAssignedNotification;
 use Afterburner\Meetings\Notifications\MeetingScheduledNotification;
 use Afterburner\Meetings\Support\AttendanceRecorderResolver;
 use Afterburner\Meetings\Tests\TestCase;
@@ -277,10 +280,12 @@ class MeetingFlowTest extends TestCase
 
     public function test_secretary_can_create_and_manage_meeting_action_items(): void
     {
+        Notification::fake();
         Event::fake([MeetingActionItemAssigned::class]);
 
         [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
         $councillor = $this->createAdditionalUser($team, [], 'council@example.com');
+        $this->attachExistingRole($councillor, $team, 'manager');
 
         $meeting = app(CreateMeeting::class)->execute(
             $team,
@@ -289,6 +294,21 @@ class MeetingFlowTest extends TestCase
             MeetingType::Council,
             targetRoleSlugs: ['manager'],
         );
+
+        $meeting = app(UpdateMeeting::class)->execute(
+            $meeting,
+            $secretary,
+            $meeting->title,
+            $meeting->type,
+            MeetingStatus::Scheduled,
+            $meeting->location,
+            $meeting->virtual_link,
+            $meeting->agenda_notes,
+            $meeting->scheduled_at,
+            $meeting->target_role_slugs,
+        );
+
+        $meeting = app(StartMeeting::class)->execute($meeting, $secretary, []);
 
         $actionItem = app(CreateMeetingActionItem::class)->execute(
             $meeting,
@@ -307,7 +327,12 @@ class MeetingFlowTest extends TestCase
             'status' => 'open',
         ]);
 
+        Event::assertNotDispatched(MeetingActionItemAssigned::class);
+
+        app(CompleteMeeting::class)->execute($meeting->fresh(), $secretary);
+
         Event::assertDispatched(MeetingActionItemAssigned::class);
+        Notification::assertSentTo($councillor, MeetingActionItemAssignedNotification::class);
 
         app(UpdateMeetingActionItem::class)->execute(
             $actionItem,
@@ -334,15 +359,17 @@ class MeetingFlowTest extends TestCase
     public function test_assignee_can_complete_own_action_item(): void
     {
         [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
+        $this->createRoleWithPermissions('councillor', []);
         $councillor = $this->createAdditionalUser($team, [], 'council@example.com');
         $councillor->update(['current_team_id' => $team->id]);
+        $this->attachExistingRole($councillor, $team, 'councillor');
 
         $meeting = app(CreateMeeting::class)->execute(
             $team,
             $secretary,
             'Council meeting',
             MeetingType::Council,
-            targetRoleSlugs: ['manager'],
+            targetRoleSlugs: ['councillor'],
         );
 
         $actionItem = app(CreateMeetingActionItem::class)->execute(
@@ -366,15 +393,17 @@ class MeetingFlowTest extends TestCase
     public function test_assignee_cannot_edit_other_fields_on_action_item(): void
     {
         [$secretary, $team] = $this->createTeamWithUser(['manage_meetings'], 'secretary@example.com');
+        $this->createRoleWithPermissions('councillor', []);
         $councillor = $this->createAdditionalUser($team, [], 'council@example.com');
         $councillor->update(['current_team_id' => $team->id]);
+        $this->attachExistingRole($councillor, $team, 'councillor');
 
         $meeting = app(CreateMeeting::class)->execute(
             $team,
             $secretary,
             'Council meeting',
             MeetingType::Council,
-            targetRoleSlugs: ['manager'],
+            targetRoleSlugs: ['councillor'],
         );
 
         $actionItem = app(CreateMeetingActionItem::class)->execute(
@@ -443,19 +472,6 @@ class MeetingFlowTest extends TestCase
             'user_id' => $user->id,
             'role_id' => $roleId,
             'team_id' => $teamId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
-    protected function attachExistingRole(User $user, $team, string $roleSlug): void
-    {
-        $roleId = DB::table('roles')->where('slug', $roleSlug)->value('id');
-
-        DB::table('user_role')->insert([
-            'user_id' => $user->id,
-            'role_id' => $roleId,
-            'team_id' => is_object($team) ? $team->id : $team,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

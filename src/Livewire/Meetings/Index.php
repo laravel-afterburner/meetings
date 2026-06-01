@@ -15,12 +15,6 @@ class Index extends Component
 
     public int $teamId;
 
-    public string $tab = 'upcoming';
-
-    protected $queryString = [
-        'tab' => ['except' => 'upcoming'],
-    ];
-
     public function mount(Team $team): void
     {
         if (! Auth::user()->belongsToTeam($team)) {
@@ -32,44 +26,14 @@ class Index extends Component
         $this->teamId = $team->id;
     }
 
-    public function setTab(string $tab): void
-    {
-        if (! in_array($tab, ['upcoming', 'past', 'draft'], true)) {
-            return;
-        }
-
-        $this->tab = $tab;
-        $this->resetPage();
-    }
-
-    public function createMeeting()
-    {
-        return $this->redirectRoute('teams.meetings.create', ['team' => $this->teamId]);
-    }
-
-    public function viewMeeting(int $meetingId)
-    {
-        return $this->redirectRoute('teams.meetings.show', ['team' => $this->teamId, 'meeting' => $meetingId]);
-    }
-
-    public function editMeeting(int $meetingId)
-    {
-        return $this->redirectRoute('teams.meetings.edit', ['team' => $this->teamId, 'meeting' => $meetingId]);
-    }
-
     public function render()
     {
         $team = Team::query()->findOrFail($this->teamId);
-        $query = Meeting::query()->forTeam($this->teamId)->with('creator');
+        $user = Auth::user();
 
-        $query = match ($this->tab) {
-            'upcoming' => $query->whereIn('status', [MeetingStatus::Scheduled, MeetingStatus::InProgress]),
-            'past' => $query->whereIn('status', [MeetingStatus::Completed, MeetingStatus::Cancelled]),
-            'draft' => $query->where('status', MeetingStatus::Draft),
-            default => $query,
-        };
-
-        $meetings = $query
+        $meetings = Meeting::query()
+            ->forTeam($this->teamId)
+            ->with('creator')
             ->withCount(['actionItems as overdue_action_items_count' => fn ($actionItems) => $actionItems->overdue()])
             ->orderByDesc('scheduled_at')
             ->orderByDesc('created_at')
@@ -78,7 +42,7 @@ class Index extends Component
         return view('afterburner-meetings::meetings.livewire.index', [
             'team' => $team,
             'meetings' => $meetings,
-            'canCreate' => Auth::user()->can('create', [Meeting::class, $team]),
+            'canCreate' => $user->can('create', [Meeting::class, $team]),
         ]);
     }
 }

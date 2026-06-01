@@ -25,6 +25,10 @@ class MeetingAgendaItems extends Component
 
     public int $meetingId;
 
+    public bool $readOnly = false;
+
+    public bool $embedded = false;
+
     public bool $showFormModal = false;
 
     public bool $showLinkModal = false;
@@ -189,7 +193,7 @@ class MeetingAgendaItems extends Component
             $this->banner(__('Linked record added to the agenda.'));
             $this->closeLinkModal();
         } catch (\Throwable $exception) {
-            $this->dangerBanner($exception->getMessage());
+            $this->addError('selectedReferenceId', $exception->getMessage());
         }
     }
 
@@ -227,15 +231,15 @@ class MeetingAgendaItems extends Component
         }
     }
 
-    public function moveAgendaItem(int $agendaItemId, string $direction): void
+    public function sortAgendaItem(int $agendaItemId, int $position): void
     {
         abort_unless($this->canManageAgenda(), 403);
 
         try {
-            app(ReorderMeetingAgendaItem::class)->execute(
+            app(ReorderMeetingAgendaItem::class)->moveToPosition(
                 $this->findAgendaItem($agendaItemId),
                 Auth::user(),
-                $direction,
+                $position,
             );
         } catch (\Throwable $exception) {
             $this->dangerBanner($exception->getMessage());
@@ -264,6 +268,10 @@ class MeetingAgendaItems extends Component
 
     protected function canManageAgenda(): bool
     {
+        if ($this->readOnly) {
+            return false;
+        }
+
         return Auth::user()->can('create', [MeetingAgendaItem::class, $this->meeting()]);
     }
 
@@ -298,11 +306,22 @@ class MeetingAgendaItems extends Component
             $provider = $registry->get($this->linkProviderKey);
 
             if ($provider !== null) {
+                $linkedReferenceKeys = MeetingAgendaItem::query()
+                    ->where('meeting_id', $this->meetingId)
+                    ->whereNotNull('reference_type')
+                    ->get(['reference_type', 'reference_id'])
+                    ->map(fn (MeetingAgendaItem $item) => $item->reference_type.':'.$item->reference_id)
+                    ->all();
+
                 $searchResults = $provider->search(
                     $this->team(),
                     Auth::user(),
                     filled($this->referenceSearch) ? $this->referenceSearch : null,
-                );
+                )->reject(function ($reference) use ($linkedReferenceKeys) {
+                    $key = $reference->getMorphClass().':'.$reference->getKey();
+
+                    return in_array($key, $linkedReferenceKeys, true);
+                })->values();
             }
         }
 
@@ -325,6 +344,7 @@ class MeetingAgendaItems extends Component
             'hasSuggestions' => $canManage && collect($availableProviders)->contains(
                 fn ($provider) => $provider->suggestions($this->team(), Auth::user(), $meeting->type, $meeting)->isNotEmpty()
             ),
+            'embedded' => $this->embedded,
         ]);
     }
 }

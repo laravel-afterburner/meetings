@@ -2,19 +2,26 @@
 
 namespace Afterburner\Meetings\Providers;
 
+use Afterburner\Documents\Models\Document;
+use Afterburner\Documents\Models\Folder;
 use Afterburner\Meetings\Console\Commands\InstallCommand;
 use Afterburner\Meetings\Contracts\MeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Database\Seeders\MeetingsPermissionsSeeder;
 use Afterburner\Meetings\Events\MeetingActionItemAssigned;
 use Afterburner\Meetings\Listeners\NotifyMeetingActionItemAssignee;
 use Afterburner\Meetings\Listeners\SyncMeetingBallotContext;
+use Afterburner\Meetings\Livewire\Documents\DocumentMeetingLinks;
 use Afterburner\Meetings\Livewire\Meetings\Calendar;
+use Afterburner\Meetings\Livewire\Meetings\Completed;
 use Afterburner\Meetings\Livewire\Meetings\Create;
 use Afterburner\Meetings\Livewire\Meetings\Index;
+use Afterburner\Meetings\Livewire\Meetings\InProgress;
 use Afterburner\Meetings\Livewire\Meetings\MeetingActionItems;
 use Afterburner\Meetings\Livewire\Meetings\MeetingAgendaItems;
+use Afterburner\Meetings\Livewire\Meetings\MeetingAttendance;
 use Afterburner\Meetings\Livewire\Meetings\MeetingBallots;
 use Afterburner\Meetings\Livewire\Meetings\MeetingDocuments;
+use Afterburner\Meetings\Livewire\Meetings\MeetingMinutes;
 use Afterburner\Meetings\Livewire\Meetings\Show;
 use Afterburner\Meetings\Models\CalendarEvent;
 use Afterburner\Meetings\Models\Meeting;
@@ -26,7 +33,9 @@ use Afterburner\Meetings\Policies\MeetingAgendaItemPolicy;
 use Afterburner\Meetings\Policies\MeetingPolicy;
 use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Support\DocumentsIntegration;
+use Afterburner\Meetings\Support\MeetingCompiledDocumentGuard;
 use Afterburner\Meetings\Support\MeetingReferenceRegistry;
+use Afterburner\Meetings\Support\MeetingsDocumentFolder;
 use Afterburner\Meetings\Support\VotingIntegration;
 use Afterburner\Playbook\Support\Playbook;
 use Afterburner\Voting\Events\BallotClosed;
@@ -97,6 +106,8 @@ class MeetingsServiceProvider extends ServiceProvider
         $this->registerPlaybook();
         $this->registerVotingEventListeners();
         $this->registerActionItemEventListeners();
+        $this->app->booted(fn () => $this->registerDocumentGuards());
+
         $this->registerPackageSeeder();
 
         if ($this->app->runningInConsole()) {
@@ -111,12 +122,17 @@ class MeetingsServiceProvider extends ServiceProvider
         Livewire::component('meetings.index', Index::class);
         Livewire::component('meetings.calendar', Calendar::class);
         Livewire::component('meetings.show', Show::class);
+        Livewire::component('meetings.in-progress', InProgress::class);
+        Livewire::component('meetings.completed', Completed::class);
         Livewire::component('meetings.create', Create::class);
         Livewire::component('meetings.meeting-action-items', MeetingActionItems::class);
         Livewire::component('meetings.meeting-agenda-items', MeetingAgendaItems::class);
+        Livewire::component('meetings.meeting-attendance', MeetingAttendance::class);
+        Livewire::component('meetings.meeting-minutes', MeetingMinutes::class);
 
         if (DocumentsIntegration::isAvailable()) {
             Livewire::component('meetings.meeting-documents', MeetingDocuments::class);
+            Livewire::component('meetings.document-meeting-links', DocumentMeetingLinks::class);
         }
 
         if (VotingIntegration::isAvailable()) {
@@ -195,6 +211,8 @@ class MeetingsServiceProvider extends ServiceProvider
                     'active' => fn () => request()->routeIs(
                         'teams.meetings.index',
                         'teams.meetings.show',
+                        'teams.meetings.in-progress',
+                        'teams.meetings.completed',
                         'teams.meetings.create',
                         'teams.meetings.edit'
                     ),
@@ -270,5 +288,57 @@ class MeetingsServiceProvider extends ServiceProvider
         if (class_exists(PackageSeederRegistry::class)) {
             PackageSeederRegistry::register(MeetingsPermissionsSeeder::class);
         }
+    }
+
+    protected function registerDocumentGuards(): void
+    {
+        if (! class_exists(Folder::class) || ! class_exists(Document::class)) {
+            return;
+        }
+
+        if ($this->app->bound('afterburner-meetings.document-guards-registered')) {
+            return;
+        }
+
+        $this->app->instance('afterburner-meetings.document-guards-registered', true);
+
+        Gate::before(function ($user, $ability, $arguments) {
+            if (! in_array($ability, ['delete', 'update'], true)) {
+                return null;
+            }
+
+            $subject = $arguments[0] ?? null;
+
+            if ($subject instanceof Folder) {
+                if (MeetingsDocumentFolder::isProtected($subject)) {
+                    return false;
+                }
+
+                return null;
+            }
+
+            if (! $subject instanceof Document) {
+                return null;
+            }
+
+            if (MeetingCompiledDocumentGuard::isManaged($subject)) {
+                return false;
+            }
+
+            return null;
+        });
+
+        Folder::updating(function (Folder $folder) {
+            if (MeetingsDocumentFolder::isProtected($folder)
+                || MeetingsDocumentFolder::wasProtected($folder)) {
+                throw new \RuntimeException('This folder is managed by Meetings and cannot be renamed or moved.');
+            }
+        });
+
+        Folder::deleting(function (Folder $folder) {
+            if (MeetingsDocumentFolder::isProtected($folder)) {
+                throw new \RuntimeException('This folder is managed by Meetings and cannot be deleted.');
+            }
+        });
     }
 }

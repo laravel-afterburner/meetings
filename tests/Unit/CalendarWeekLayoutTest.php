@@ -64,8 +64,9 @@ class CalendarWeekLayoutTest extends TestCase
 
         $this->assertCount(0, $layout['bars']);
         $this->assertCount(1, $layout['days'][2]['timedEntries']);
-        $this->assertSame('9:00 AM', $layout['days'][2]['timedEntries'][0]['timeLabel']);
-        $this->assertSame('9:00 AM – 12:00 PM', $layout['days'][2]['timedEntries'][0]['timeRangeLabel']);
+        $timed = $layout['days'][2]['timedEntries'][0];
+        $this->assertSame($entry->timeLabel(), $timed['timeLabel']);
+        $this->assertSame($entry->timeRangeLabel(), $timed['timeRangeLabel']);
     }
 
     public function test_overlapping_timed_events_use_side_by_side_columns(): void

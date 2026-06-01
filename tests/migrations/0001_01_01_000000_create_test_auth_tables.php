@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->foreignId('current_team_id')->nullable();
+            $table->string('timezone')->nullable();
             $table->timestamps();
         });
 

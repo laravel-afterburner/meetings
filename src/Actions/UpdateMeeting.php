@@ -27,8 +27,14 @@ class UpdateMeeting
     ): Meeting {
         if ($meeting->isEditable()) {
             Gate::forUser($user)->authorize('update', $meeting);
+        } elseif ($status === $meeting->status && $meeting->status === MeetingStatus::Completed) {
+            Gate::forUser($user)->authorize('update', $meeting);
         } elseif ($status === $meeting->status) {
             throw new MeetingsException('This meeting can no longer be edited.');
+        } elseif ($status === MeetingStatus::InProgress && $meeting->status === MeetingStatus::Scheduled) {
+            Gate::forUser($user)->authorize('start', $meeting);
+        } elseif ($status === MeetingStatus::Completed && $meeting->status === MeetingStatus::InProgress) {
+            Gate::forUser($user)->authorize('complete', $meeting);
         } else {
             Gate::forUser($user)->authorize('manageAttendance', $meeting);
         }
@@ -48,6 +54,14 @@ class UpdateMeeting
             if ($targetRoleSlugs !== null) {
                 $payload['target_role_slugs'] = $targetRoleSlugs;
             }
+        } elseif ($meeting->status === MeetingStatus::Completed && $status === MeetingStatus::Completed) {
+            $payload += [
+                'title' => $title,
+                'location' => $location,
+                'virtual_link' => $virtualLink,
+                'agenda_notes' => $agendaNotes,
+                'scheduled_at' => $scheduledAt,
+            ];
         }
 
         $becameScheduled = $status === MeetingStatus::Scheduled

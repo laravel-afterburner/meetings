@@ -6,8 +6,8 @@ use Afterburner\Meetings\Actions\CreateCalendarEvent;
 use Afterburner\Meetings\Actions\DeleteCalendarEvent;
 use Afterburner\Meetings\Actions\UpdateCalendarEvent;
 use Afterburner\Meetings\Models\CalendarEvent;
-use Afterburner\Meetings\Support\CalendarEventSchedule;
 use Afterburner\Meetings\Support\CalendarEntry;
+use Afterburner\Meetings\Support\CalendarEventSchedule;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
 use Afterburner\Meetings\Support\CalendarWeekLayout;
@@ -17,6 +17,7 @@ use App\Traits\InteractsWithBanner;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class Calendar extends Component
@@ -47,8 +48,11 @@ class Calendar extends Component
 
     public ?string $endsAtLocal = null;
 
+    public string $displayTimezoneMode = '';
+
     protected $queryString = [
         'month' => ['except' => ''],
+        'displayTimezoneMode' => ['except' => '', 'as' => 'tz'],
     ];
 
     public function mount(Team $team): void
@@ -62,26 +66,49 @@ class Calendar extends Component
         abort_unless(Auth::user()->can('viewAny', CalendarEvent::class), 403);
 
         $this->teamId = $team->id;
+        $this->resolveDisplayTimezoneMode($team);
 
         if ($this->month === '') {
-            $this->month = TeamDateTime::toTeamTimezone($team, now())->format('Y-m');
+            $this->month = $this->nowInCalendarTimezone($team)->format('Y-m');
         }
+    }
+
+    public function setDisplayTimezoneMode(string $mode): void
+    {
+        $team = Team::query()->findOrFail($this->teamId);
+
+        if (! in_array($mode, [TeamDateTime::CALENDAR_DISPLAY_TEAM, TeamDateTime::CALENDAR_DISPLAY_USER], true)) {
+            return;
+        }
+
+        if ($mode === TeamDateTime::CALENDAR_DISPLAY_USER && ! TeamDateTime::canChooseCalendarDisplayTimezone($team)) {
+            return;
+        }
+
+        $this->displayTimezoneMode = $mode;
+        session(['meetings.calendar.display_timezone_mode' => $mode]);
     }
 
     public function previousMonth(): void
     {
-        $this->month = $this->monthCarbon()->subMonth()->format('Y-m');
+        $this->setMonth($this->monthCarbon()->copy()->subMonth()->format('Y-m'));
     }
 
     public function nextMonth(): void
     {
-        $this->month = $this->monthCarbon()->addMonth()->format('Y-m');
+        $this->setMonth($this->monthCarbon()->copy()->addMonth()->format('Y-m'));
     }
 
     public function goToToday(): void
     {
         $team = Team::query()->findOrFail($this->teamId);
-        $this->month = TeamDateTime::toTeamTimezone($team, now())->format('Y-m');
+        $this->setMonth($this->nowInCalendarTimezone($team)->format('Y-m'));
+    }
+
+    protected function setMonth(string $month): void
+    {
+        $this->month = $month;
+        $this->dispatch('calendar-scroll-to-month-start');
     }
 
     public function openCreateForDate(string $date): void
@@ -120,6 +147,17 @@ class Calendar extends Component
         }
 
         $this->endDate = CalendarEventSchedule::syncedAllDayEnd($value, $this->endDate);
+    }
+
+    public function updatedEndDate(string $value): void
+    {
+        if (! $this->allDay) {
+            return;
+        }
+
+        if ($this->startDate === '' || $value < $this->startDate) {
+            $this->startDate = $value;
+        }
     }
 
     public function updatedStartsAtLocal(?string $value): void
@@ -267,14 +305,6 @@ class Calendar extends Component
         $this->closeEventModal();
     }
 
-    public function viewMeeting(int $meetingId)
-    {
-        return $this->redirectRoute('teams.meetings.show', [
-            'team' => $this->teamId,
-            'meeting' => $meetingId,
-        ]);
-    }
-
     public function copyFeedUrl(): void
     {
         $team = Team::query()->findOrFail($this->teamId);
@@ -286,16 +316,19 @@ class Calendar extends Component
     public function render()
     {
         $team = Team::query()->findOrFail($this->teamId);
+        $displayTimezone = $this->calendarTimezone($team);
         $monthStart = $this->monthCarbon()->copy()->startOfMonth();
         $monthEnd = $this->monthCarbon()->copy()->endOfMonth();
         $gridStart = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
         $gridEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
 
         /** @var Collection<int, CalendarEntry> $entries */
-        $entries = app(CalendarQuery::class)->entriesForRange($team, $gridStart, $gridEnd);
+        $entries = app(CalendarQuery::class)->entriesForRange($team, $gridStart, $gridEnd)
+            ->map(fn (CalendarEntry $entry) => $entry->forDisplayTimezone($displayTimezone));
 
         $weeks = collect();
         $cursor = $gridStart->copy();
+        $today = $this->nowInCalendarTimezone($team);
 
         while ($cursor->lte($gridEnd)) {
             $weekDays = collect();
@@ -307,7 +340,7 @@ class Calendar extends Component
                     'date' => $date->format('Y-m-d'),
                     'day' => $date->day,
                     'inMonth' => $date->month === $monthStart->month,
-                    'isToday' => $date->isSameDay(TeamDateTime::toTeamTimezone($team, now())),
+                    'isToday' => $date->isSameDay($today),
                 ]);
 
                 $cursor->addDay();
@@ -321,20 +354,59 @@ class Calendar extends Component
             'team' => $team,
             'weeks' => $weeks,
             'monthLabel' => $monthStart->format('F Y'),
-            'timezone' => TeamDateTime::teamTimezone($team),
+            'timezone' => $displayTimezone,
+            'inputTimezone' => TeamDateTime::datetimeLocalTimezone($team),
+            'inputTeamTimezoneHint' => TeamDateTime::datetimeLocalTeamTimezoneHint($team),
+            'canChooseDisplayTimezone' => TeamDateTime::canChooseCalendarDisplayTimezone($team),
+            'displayTimezoneMode' => $this->displayTimezoneMode,
             'canCreate' => Auth::user()->can('create', [CalendarEvent::class, $team]),
-            'todayDate' => TeamDateTime::toTeamTimezone($team, now())->format('Y-m-d'),
-            'feedUrl' => CalendarFeedToken::feedUrl(Auth::user(), $team),
+            'todayDate' => $today->format('Y-m-d'),
             'webcalUrl' => CalendarFeedToken::webcalUrl(Auth::user(), $team),
+            'monthAnchorDate' => $monthStart->format('Y-m-d'),
         ]);
+    }
+
+    protected function resolveDisplayTimezoneMode(Team $team): void
+    {
+        $validModes = [TeamDateTime::CALENDAR_DISPLAY_TEAM, TeamDateTime::CALENDAR_DISPLAY_USER];
+
+        if (! in_array($this->displayTimezoneMode, $validModes, true)) {
+            $this->displayTimezoneMode = session(
+                'meetings.calendar.display_timezone_mode',
+                TeamDateTime::defaultCalendarDisplayMode($team)
+            );
+        }
+
+        session(['meetings.calendar.display_timezone_mode' => $this->displayTimezoneMode]);
+    }
+
+    protected function calendarTimezone(Team $team): string
+    {
+        return TeamDateTime::resolveCalendarDisplayTimezone($team, $this->displayTimezoneMode);
+    }
+
+    protected function nowInCalendarTimezone(Team $team): Carbon
+    {
+        return now()->setTimezone($this->calendarTimezone($team));
     }
 
     protected function monthCarbon(): Carbon
     {
         $team = Team::query()->findOrFail($this->teamId);
-        $timezone = TeamDateTime::teamTimezone($team);
+        $timezone = $this->calendarTimezone($team);
 
-        return Carbon::createFromFormat('Y-m', $this->month, $timezone)->startOfMonth();
+        if (! preg_match('/^\d{4}-\d{2}$/', $this->month)) {
+            return $this->nowInCalendarTimezone($team)->startOfMonth();
+        }
+
+        // Y-m alone is ambiguous in Carbon with a timezone (e.g. 2026-06 becomes July 1 in America/Vancouver).
+        $month = Carbon::createFromFormat('Y-m-d', $this->month.'-01', $timezone);
+
+        if ($month === false) {
+            return $this->nowInCalendarTimezone($team)->startOfMonth();
+        }
+
+        return $month->startOfDay();
     }
 
     /**
@@ -342,9 +414,8 @@ class Calendar extends Component
      */
     protected function resolveEventTimes(Team $team): array
     {
-        $timezone = TeamDateTime::teamTimezone($team);
-
         if ($this->allDay) {
+            $timezone = TeamDateTime::teamTimezone($team);
             $startsAt = Carbon::parse($this->startDate, $timezone)->startOfDay()->utc();
             $endsAt = Carbon::parse($this->endDate, $timezone)->endOfDay()->utc();
 
@@ -355,13 +426,13 @@ class Calendar extends Component
         $endsAt = TeamDateTime::fromDateTimeLocal($team, $this->endsAtLocal)?->utc();
 
         if (! $startsAt || ! $endsAt) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'startsAtLocal' => 'Enter a valid start date and time.',
             ]);
         }
 
         if ($endsAt->lte($startsAt)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'endsAtLocal' => 'The end must be after the start.',
             ]);
         }

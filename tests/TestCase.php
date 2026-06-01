@@ -76,6 +76,7 @@ abstract class TestCase extends BaseTestCase
         if (is_dir($documentsMigrations)) {
             $this->loadMigrationsFrom($documentsMigrations);
         }
+
     }
 
     protected function seedPermissions(): void
@@ -171,5 +172,18 @@ abstract class TestCase extends BaseTestCase
         ]);
 
         return $user;
+    }
+
+    protected function attachExistingRole(User $user, Team $team, string $roleSlug): void
+    {
+        $roleId = DB::table('roles')->where('slug', $roleSlug)->value('id');
+
+        DB::table('user_role')->insert([
+            'user_id' => $user->id,
+            'role_id' => $roleId,
+            'team_id' => $team->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

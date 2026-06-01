@@ -116,6 +116,40 @@ class MeetingAgendaItemsTest extends TestCase
         );
     }
 
+    public function test_suggested_items_skip_records_already_on_agenda(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        $reference = FakeAgendaReference::query()->create([
+            'team_id' => $team->id,
+            'title' => 'Suggested topic A',
+        ]);
+
+        FakeAgendaReference::query()->create([
+            'team_id' => $team->id,
+            'title' => 'Suggested topic B',
+        ]);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $user,
+            'Council meeting',
+            MeetingType::Council,
+        );
+
+        app(LinkMeetingAgendaReference::class)->execute(
+            $meeting,
+            $user,
+            'fake_record',
+            $reference->id,
+        );
+
+        $created = app(AddSuggestedMeetingAgendaItems::class)->execute($meeting, $user);
+
+        $this->assertCount(1, $created);
+        $this->assertSame(2, MeetingAgendaItem::query()->where('meeting_id', $meeting->id)->count());
+    }
+
     public function test_add_suggested_agenda_items(): void
     {
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
@@ -161,6 +195,28 @@ class MeetingAgendaItemsTest extends TestCase
 
         $this->assertSame(1, $second->fresh()->sort_order);
         $this->assertSame(2, $first->fresh()->sort_order);
+    }
+
+    public function test_move_agenda_item_to_position(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        $meeting = app(CreateMeeting::class)->execute(
+            $team,
+            $user,
+            'Council meeting',
+            MeetingType::Council,
+        );
+
+        $first = app(CreateMeetingAgendaItem::class)->execute($meeting, $user, 'First item');
+        $second = app(CreateMeetingAgendaItem::class)->execute($meeting, $user, 'Second item');
+        $third = app(CreateMeetingAgendaItem::class)->execute($meeting, $user, 'Third item');
+
+        app(ReorderMeetingAgendaItem::class)->moveToPosition($third, $user, 0);
+
+        $this->assertSame(1, $third->fresh()->sort_order);
+        $this->assertSame(2, $first->fresh()->sort_order);
+        $this->assertSame(3, $second->fresh()->sort_order);
     }
 
     public function test_delete_agenda_item(): void

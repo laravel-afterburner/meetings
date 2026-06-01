@@ -11,7 +11,7 @@ enum MeetingType: string
     public function label(): string
     {
         return match ($this) {
-            self::Agm => 'AGM',
+            self::Agm => 'Annual General (AGM)',
             self::Council => 'Council',
             self::Special => 'Special',
         };

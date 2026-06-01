@@ -12,6 +12,19 @@ return [
 
     'documents_enabled' => env('AFTERBURNER_MEETINGS_DOCUMENTS_ENABLED', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Meeting document package
+    |--------------------------------------------------------------------------
+    |
+    | Completed meetings can be compiled into a PDF and stored in a protected
+    | root folder in the documents library (similar to host-managed folders).
+    |
+    */
+    'documents_package' => [
+        'folder_name' => env('AFTERBURNER_MEETINGS_DOCUMENTS_FOLDER', 'Meetings'),
+    ],
+
     'voting_enabled' => env('AFTERBURNER_MEETINGS_VOTING_ENABLED', true),
 
     /*
@@ -30,6 +43,22 @@ return [
     ],
 
     'selectable_audience_role_slugs' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Council positions for action-item assignment
+    |--------------------------------------------------------------------------
+    |
+    | Members holding these role slugs may be assigned action items even when
+    | they were not marked present at the meeting.
+    |
+    */
+    'council_position_role_slugs' => [
+        'president',
+        'vice_president',
+        'secretary',
+        'treasurer',
+    ],
 
     /*
     |--------------------------------------------------------------------------

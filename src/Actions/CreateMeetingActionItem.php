@@ -3,10 +3,11 @@
 namespace Afterburner\Meetings\Actions;
 
 use Afterburner\Meetings\Enums\ActionItemStatus;
-use Afterburner\Meetings\Events\MeetingActionItemAssigned;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
+use Afterburner\Meetings\Support\MeetingActionItemNotificationService;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -31,9 +32,7 @@ class CreateMeetingActionItem
             throw new MeetingsException('Action item title is required.');
         }
 
-        if ($assignedToUserId !== null && ! $meeting->team->users()->where('users.id', $assignedToUserId)->exists()) {
-            throw new MeetingsException('Assignee must be a member of this team.');
-        }
+        app(MeetingActionItemAssigneeService::class)->assertEligible($meeting, $assignedToUserId);
 
         $nextSortOrder = $sortOrder ?? ((int) $meeting->actionItems()->max('sort_order')) + 1;
 
@@ -49,10 +48,12 @@ class CreateMeetingActionItem
             'sort_order' => $nextSortOrder,
         ]);
 
+        $actionItem = $actionItem->fresh(['meeting', 'assignee', 'creator']);
+
         if ($assignedToUserId !== null) {
-            MeetingActionItemAssigned::dispatch($actionItem->fresh(['meeting', 'assignee']));
+            app(MeetingActionItemNotificationService::class)->notifyAssignee($actionItem);
         }
 
-        return $actionItem->fresh(['assignee', 'creator']);
+        return $actionItem;
     }
 }

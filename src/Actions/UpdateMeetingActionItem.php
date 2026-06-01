@@ -3,9 +3,10 @@
 namespace Afterburner\Meetings\Actions;
 
 use Afterburner\Meetings\Enums\ActionItemStatus;
-use Afterburner\Meetings\Events\MeetingActionItemAssigned;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
+use Afterburner\Meetings\Support\MeetingActionItemNotificationService;
 use Afterburner\Meetings\Support\TeamPermissionGate;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +27,8 @@ class UpdateMeetingActionItem
         bool $descriptionProvided = false,
     ): MeetingActionItem {
         Gate::forUser($user)->authorize('update', $actionItem);
+
+        $actionItem->loadMissing('meeting');
 
         if ($actionItem->team_id !== $user->currentTeam?->id) {
             throw new MeetingsException('You do not belong to this team.');
@@ -58,9 +61,7 @@ class UpdateMeetingActionItem
             }
 
             if ($assigneeFieldsProvided) {
-                if ($assignedToUserId !== null && ! $actionItem->team->users()->where('users.id', $assignedToUserId)->exists()) {
-                    throw new MeetingsException('Assignee must be a member of this team.');
-                }
+                app(MeetingActionItemAssigneeService::class)->assertEligible($actionItem->meeting, $assignedToUserId);
 
                 $actionItem->assigned_to_user_id = $assignedToUserId;
             }
@@ -86,10 +87,16 @@ class UpdateMeetingActionItem
 
         $actionItem->save();
 
-        if ($canManage && $assigneeFieldsProvided && $assignedToUserId !== null && $assignedToUserId !== $previousAssigneeId) {
-            MeetingActionItemAssigned::dispatch($actionItem->fresh(['meeting', 'assignee']));
+        $actionItem = $actionItem->fresh(['meeting', 'assignee', 'creator']);
+
+        if ($canManage && $assigneeFieldsProvided && $assignedToUserId !== $previousAssigneeId) {
+            $notificationService = app(MeetingActionItemNotificationService::class);
+
+            if ($notificationService->shouldNotifyOnAssign($actionItem->meeting)) {
+                $notificationService->syncAssigneeChange($actionItem, $previousAssigneeId, $assignedToUserId);
+            }
         }
 
-        return $actionItem->fresh(['assignee', 'creator']);
+        return $actionItem;
     }
 }

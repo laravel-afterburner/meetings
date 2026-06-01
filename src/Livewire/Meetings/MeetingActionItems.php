@@ -9,6 +9,7 @@ use Afterburner\Meetings\Actions\UpdateMeetingActionItem;
 use Afterburner\Meetings\Enums\ActionItemStatus;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
+use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
 use Afterburner\Meetings\Support\TeamDateTime;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;
@@ -22,6 +23,12 @@ class MeetingActionItems extends Component
     public int $teamId;
 
     public int $meetingId;
+
+    public bool $readOnly = false;
+
+    public bool $embedded = false;
+
+    public string $assigneeScope = 'team';
 
     public bool $showFormModal = false;
 
@@ -150,6 +157,8 @@ class MeetingActionItems extends Component
 
     public function completeActionItem(int $actionItemId): void
     {
+        abort_if($this->readOnly, 403);
+
         $actionItem = $this->findActionItem($actionItemId);
 
         try {
@@ -162,6 +171,8 @@ class MeetingActionItems extends Component
 
     public function updateStatus(int $actionItemId, string $status): void
     {
+        abort_if($this->readOnly, 403);
+
         $actionItem = $this->findActionItem($actionItemId);
 
         try {
@@ -211,6 +222,10 @@ class MeetingActionItems extends Component
 
     protected function canManageActionItems(): bool
     {
+        if ($this->readOnly) {
+            return false;
+        }
+
         return Auth::user()->can('create', [MeetingActionItem::class, $this->meeting()]);
     }
 
@@ -252,6 +267,8 @@ class MeetingActionItems extends Component
         $meeting = $this->meeting();
         $team = $this->team();
         $canManage = $this->canManageActionItems();
+        $canViewAll = $canManage
+            || ($this->readOnly && Auth::user()->can('create', [MeetingActionItem::class, $meeting]));
 
         $query = MeetingActionItem::query()
             ->with(['assignee', 'creator'])
@@ -260,12 +277,14 @@ class MeetingActionItems extends Component
             ->orderBy('sort_order')
             ->orderBy('id');
 
-        if (! $canManage) {
+        if (! $canViewAll) {
             $query->assignedTo(Auth::id());
         }
 
         $teamMembers = $canManage
-            ? $team->users()->orderBy('name')->get()
+            ? ($this->assigneeScope === 'meeting'
+                ? app(MeetingActionItemAssigneeService::class)->eligibleUsers($meeting)
+                : $team->users()->orderBy('name')->get())
             : collect();
 
         return view('afterburner-meetings::meetings.livewire.meeting-action-items', [
@@ -273,6 +292,8 @@ class MeetingActionItems extends Component
             'meeting' => $meeting,
             'actionItems' => $query->get(),
             'canManageActionItems' => $canManage,
+            'readOnly' => $this->readOnly,
+            'embedded' => $this->embedded,
             'teamMembers' => $teamMembers,
             'statusOptions' => ActionItemStatus::cases(),
         ]);

@@ -4,23 +4,75 @@ namespace Afterburner\Meetings\Tests\Feature;
 
 use Afterburner\Meetings\Actions\CreateCalendarEvent;
 use Afterburner\Meetings\Actions\CreateMeeting;
+use Afterburner\Meetings\Actions\UpdateMeeting;
 use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Enums\MeetingType;
-use Afterburner\Meetings\Models\CalendarEvent;
+use Afterburner\Meetings\Exceptions\MeetingsException;
+use Afterburner\Meetings\Livewire\Meetings\Calendar;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
+use Afterburner\Meetings\Support\TeamDateTime;
 use Afterburner\Meetings\Tests\TestCase;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 class CalendarTest extends TestCase
 {
+    public function test_next_month_navigates_from_may_to_june(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+        $component->month = '2026-05';
+
+        $component->nextMonth();
+
+        $this->assertSame('2026-06', $component->month);
+    }
+
+    public function test_month_carbon_parses_june_correctly_in_pacific_timezone(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+        $team->timezone = 'America/Vancouver';
+        $team->save();
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+        $component->month = '2026-06';
+
+        $method = new \ReflectionMethod(Calendar::class, 'monthCarbon');
+        $method->setAccessible(true);
+        $monthStart = $method->invoke($component);
+
+        $this->assertSame('2026-06-01', $monthStart->format('Y-m-d'));
+        $this->assertSame(6, $monthStart->month);
+    }
+
+    public function test_july_previous_month_navigates_to_june_in_pacific_timezone(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+        $team->timezone = 'America/Vancouver';
+        $team->save();
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+        $component->month = '2026-07';
+
+        $component->previousMonth();
+
+        $this->assertSame('2026-06', $component->month);
+    }
+
     public function test_calendar_route_is_registered_before_meeting_show_route(): void
     {
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
 
         $matched = Route::getRoutes()->match(
-            \Illuminate\Http\Request::create("/teams/{$team->id}/meetings/calendar", 'GET')
+            Request::create("/teams/{$team->id}/meetings/calendar", 'GET')
         );
 
         $this->assertSame('teams.meetings.calendar', $matched->getName());
@@ -64,7 +116,7 @@ class CalendarTest extends TestCase
             scheduledAt: now()->addDays(3),
         );
 
-        app(\Afterburner\Meetings\Actions\UpdateMeeting::class)->execute(
+        app(UpdateMeeting::class)->execute(
             $meeting,
             $user,
             $meeting->title,
@@ -124,7 +176,7 @@ class CalendarTest extends TestCase
         [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
         $member = $this->createAdditionalUser($team, [], 'viewer@example.com');
 
-        $this->expectException(\Illuminate\Auth\Access\AuthorizationException::class);
+        $this->expectException(AuthorizationException::class);
 
         app(CreateCalendarEvent::class)->execute(
             $team,
@@ -159,7 +211,7 @@ class CalendarTest extends TestCase
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
         $startsAt = now()->addDay()->utc();
 
-        $this->expectException(\Afterburner\Meetings\Exceptions\MeetingsException::class);
+        $this->expectException(MeetingsException::class);
 
         app(CreateCalendarEvent::class)->execute(
             $team,
@@ -168,5 +220,40 @@ class CalendarTest extends TestCase
             $startsAt,
             $startsAt->copy(),
         );
+    }
+
+    public function test_all_day_event_update_can_shorten_to_single_team_day_with_user_timezone(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+        $team->update(['timezone' => 'America/Vancouver']);
+        $user->update(['timezone' => 'America/Iqaluit']);
+        Auth::login($user);
+
+        $timezone = TeamDateTime::teamTimezone($team);
+        $event = app(CreateCalendarEvent::class)->execute(
+            $team,
+            $user,
+            'Board planning',
+            Carbon::parse('2026-06-19', $timezone)->startOfDay()->utc(),
+            Carbon::parse('2026-06-20', $timezone)->endOfDay()->utc(),
+            true,
+        );
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+        $component->editingEventId = $event->id;
+        $component->title = $event->title;
+        $component->allDay = true;
+        $component->startDate = '2026-06-20';
+        $component->endDate = '2026-06-20';
+
+        $component->saveEvent();
+
+        $event->refresh();
+        $startsAt = TeamDateTime::toTeamTimezone($team, $event->starts_at);
+        $endsAt = TeamDateTime::toTeamTimezone($team, $event->ends_at);
+
+        $this->assertSame('2026-06-20', $startsAt->format('Y-m-d'));
+        $this->assertSame('2026-06-20', $endsAt->format('Y-m-d'));
     }
 }

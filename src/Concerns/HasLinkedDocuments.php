@@ -2,20 +2,19 @@
 
 namespace Afterburner\Meetings\Concerns;
 
-use Afterburner\Documents\Models\Document;
 use Afterburner\Meetings\Support\DocumentsIntegration;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 trait HasLinkedDocuments
 {
-    public function linkedDocuments(): MorphToMany
+    public function linkedDocuments(): Relation
     {
         if (! DocumentsIntegration::isAvailable()) {
-            throw new \RuntimeException('The documents package is required for meeting document links.');
+            return DocumentsIntegration::emptyLinkedDocumentsRelation($this);
         }
 
         return $this->morphToMany(
-            Document::class,
+            \Afterburner\Documents\Models\Document::class,
             'linkable',
             'document_links',
             'linkable_id',

@@ -20,6 +20,8 @@ class MeetingActionItem extends Model
         'status',
         'created_by_user_id',
         'completed_at',
+        'assignee_notified_at',
+        'assignee_notification_id',
         'sort_order',
     ];
 
@@ -27,6 +29,7 @@ class MeetingActionItem extends Model
         'status' => ActionItemStatus::class,
         'due_at' => 'datetime',
         'completed_at' => 'datetime',
+        'assignee_notified_at' => 'datetime',
     ];
 
     public function meeting(): BelongsTo

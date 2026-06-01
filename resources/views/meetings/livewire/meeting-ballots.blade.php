@@ -1,19 +1,27 @@
 <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Linked ballots</h4>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Reference ballots for this meeting. Voting mechanics remain in the voting package.
-            </p>
-        </div>
+    @if (! $embedded || $canLinkBallots)
+    <div class="flex flex-wrap items-center justify-between gap-3 {{ $embedded ? 'justify-end' : '' }}">
+        @unless ($embedded)
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Linked ballots</h4>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    @if ($canLinkBallots)
+                        Reference ballots for this meeting. Voting mechanics remain in the voting package.
+                    @else
+                        Ballots linked to this meeting for reference during the session.
+                    @endif
+                </p>
+            </div>
+        @endunless
         @if ($canLinkBallots)
             <x-secondary-button type="button" wire:click="openLinkModal" no-spinner>
                 Link ballot
             </x-secondary-button>
         @endif
     </div>
+    @endif
 
-    <div class="mt-4 space-y-3">
+    <div class="{{ (! $embedded || $canLinkBallots) ? 'mt-4' : '' }} space-y-3">
         @forelse ($linkedBallots as $ballot)
             @php
                 $event = $ballotEvents[(string) $ballot->id] ?? null;

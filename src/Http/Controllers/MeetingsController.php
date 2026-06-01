@@ -39,6 +39,28 @@ class MeetingsController
         ]);
     }
 
+    public function inProgress(Team $team, Meeting $meeting): View
+    {
+        $this->ensureTeamAccess($team);
+        $this->ensureMeetingBelongsToTeam($team, $meeting);
+
+        return view('afterburner-meetings::meetings.in-progress', [
+            'team' => $team,
+            'meeting' => $meeting,
+        ]);
+    }
+
+    public function completed(Team $team, Meeting $meeting): View
+    {
+        $this->ensureTeamAccess($team);
+        $this->ensureMeetingBelongsToTeam($team, $meeting);
+
+        return view('afterburner-meetings::meetings.completed', [
+            'team' => $team,
+            'meeting' => $meeting,
+        ]);
+    }
+
     public function edit(Team $team, Meeting $meeting): View
     {
         $this->ensureTeamAccess($team);

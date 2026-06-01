@@ -1,20 +1,11 @@
 <div>
-    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div class="w-full sm:w-auto sm:min-w-[12rem]">
-            <x-label for="meetingTab" value="Show" />
-            <x-select-input id="meetingTab" wire:model.live="tab" class="mt-1 block w-full">
-                <option value="upcoming">Upcoming</option>
-                <option value="past">Past</option>
-                <option value="draft">Drafts</option>
-            </x-select-input>
-        </div>
-
-        @if ($canCreate)
-            <x-button wire:click="createMeeting" no-spinner>
+    @if ($canCreate)
+        <div class="mb-6 flex justify-end">
+            <x-button href="{{ route('teams.meetings.create', ['team' => $team]) }}" wire:navigate>
                 Create meeting
             </x-button>
-        @endif
-    </div>
+        </div>
+    @endif
 
     <div class="overflow-hidden bg-white shadow sm:rounded-lg dark:bg-gray-800">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -39,15 +30,23 @@
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
                 @forelse ($meetings as $meeting)
+                    @php
+                        $canEdit = auth()->user()->can('update', $meeting)
+                            && in_array($meeting->status, [\Afterburner\Meetings\Enums\MeetingStatus::Draft, \Afterburner\Meetings\Enums\MeetingStatus::Scheduled], true);
+                        $canStart = auth()->user()->can('start', $meeting);
+                        $canContinue = $meeting->status === \Afterburner\Meetings\Enums\MeetingStatus::InProgress
+                            && (auth()->user()->can('conductSession', $meeting) || auth()->user()->can('complete', $meeting));
+                        $canWrapUp = auth()->user()->can('reviseAfterCompletion', $meeting);
+                    @endphp
                     <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/50" wire:key="meeting-row-{{ $meeting->id }}">
                         <td class="px-6 py-4">
-                            <button
-                                type="button"
-                                wire:click="viewMeeting({{ $meeting->id }})"
+                            <a
+                                href="{{ route('teams.meetings.show', ['team' => $team, 'meeting' => $meeting]) }}"
+                                wire:navigate
                                 class="text-left text-sm font-medium text-gray-900 hover:text-indigo-600 dark:text-gray-100 dark:hover:text-indigo-400"
                             >
                                 {{ $meeting->title }}
-                            </button>
+                            </a>
                             @if (($meeting->overdue_action_items_count ?? 0) > 0)
                                 <span class="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300">
                                     {{ $meeting->overdue_action_items_count }} overdue
@@ -69,22 +68,56 @@
                             @if ($meeting->scheduled_at)
                                 {!! \Afterburner\Meetings\Support\TeamDateTime::formatDisplay($team, $meeting->scheduled_at) !!}
                             @else
-                                —
+                                Pending
                             @endif
                         </td>
                         <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                            <div class="flex items-center justify-end space-x-2">
-                                <x-action-icon type="view" wire:click="viewMeeting({{ $meeting->id }})" title="View meeting" />
-                                @can('update', $meeting)
-                                    <x-action-icon type="edit" wire:click="editMeeting({{ $meeting->id }})" title="Edit meeting" />
-                                @endcan
+                            <div class="flex items-center justify-end gap-1">
+                                <x-afterburner-meetings::meeting-nav-icon
+                                    action="view"
+                                    :href="route('teams.meetings.show', ['team' => $team, 'meeting' => $meeting])"
+                                    title="View meeting"
+                                    wire:navigate
+                                />
+                                @if ($canEdit)
+                                    <x-afterburner-meetings::meeting-nav-icon
+                                        action="edit"
+                                        :href="route('teams.meetings.edit', ['team' => $team, 'meeting' => $meeting])"
+                                        title="Edit meeting"
+                                        wire:navigate
+                                    />
+                                @endif
+                                @if ($canStart)
+                                    <x-afterburner-meetings::meeting-nav-icon
+                                        action="start"
+                                        :href="route('teams.meetings.show', ['team' => $team, 'meeting' => $meeting])"
+                                        title="Start meeting"
+                                        wire:navigate
+                                    />
+                                @endif
+                                @if ($canContinue)
+                                    <x-afterburner-meetings::meeting-nav-icon
+                                        action="continue"
+                                        :href="route('teams.meetings.in-progress', ['team' => $team, 'meeting' => $meeting])"
+                                        title="Continue meeting"
+                                        wire:navigate
+                                    />
+                                @endif
+                                @if ($canWrapUp)
+                                    <x-afterburner-meetings::meeting-nav-icon
+                                        action="wrap-up"
+                                        :href="route('teams.meetings.completed', ['team' => $team, 'meeting' => $meeting])"
+                                        title="Wrap up meeting"
+                                        wire:navigate
+                                    />
+                                @endif
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                            No meetings in this list yet.
+                        <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No meetings yet.
                         </td>
                     </tr>
                 @endforelse

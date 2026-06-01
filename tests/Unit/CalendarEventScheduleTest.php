@@ -54,4 +54,12 @@ class CalendarEventScheduleTest extends TestCase
             CalendarEventSchedule::syncedAllDayEnd('2026-06-01', '2026-05-30'),
         );
     }
+
+    public function test_synced_all_day_end_keeps_later_end_when_start_moves_forward(): void
+    {
+        $this->assertSame(
+            '2026-06-20',
+            CalendarEventSchedule::syncedAllDayEnd('2026-06-20', '2026-06-20'),
+        );
+    }
 }
