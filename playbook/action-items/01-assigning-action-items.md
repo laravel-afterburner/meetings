@@ -10,11 +10,11 @@ Action items capture follow-up work from a meeting—who is responsible, what is
 
 ## Steps
 
-1. Open the meeting record after the session.
+1. Open the meeting record from **Events → Meetings** (during or after the session).
 2. Go to the **Action items** area.
-3. Click **Add action item** (or equivalent).
+3. Click **Add action item**.
 4. Enter a clear description, assign a member, and set a due date if applicable.
-5. Save. Assignees receive notification when your app is configured to send them.
+5. Save. Assignees receive a notification when your app is configured to send them.
 
 ## Best practices
 
@@ -24,5 +24,6 @@ Action items capture follow-up work from a meeting—who is responsible, what is
 
 ## See also
 
-- [Meetings overview](/playbook/meetings/overview)
-- [Voting overview](/playbook/voting/overview) — when decisions require a ballot
+- [Meetings overview](/help/meetings/overview)
+- [Running a meeting](/help/meetings/running-a-meeting)
+- [Voting overview](/help/voting/overview) — when decisions require a ballot

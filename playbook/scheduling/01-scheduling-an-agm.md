@@ -10,7 +10,7 @@ Make sure your {{ entity_label }} register is up to date before scheduling an AG
 
 ## Steps
 
-1. Open **Meetings** from the main navigation.
+1. Open **Events → Meetings** from the main navigation.
 2. Click **Create meeting**.
 3. Choose **AGM** as the meeting type.
 4. Set the date, time, and location (or virtual meeting details).
@@ -18,9 +18,10 @@ Make sure your {{ entity_label }} register is up to date before scheduling an AG
 
 ## After scheduling
 
-- Publish or distribute a [meeting notice](/playbook/meetings/meeting-notices) to owners and members.
-- Attach supporting files from [Documents](/playbook/documents/overview) when the documents package is installed.
+- Publish or distribute a [meeting notice](/help/meetings/meeting-notices) to owners and members.
+- Attach supporting files from [Documents](/help/documents/overview) when the documents package is installed.
+- Link related [ballots](/help/voting/creating-a-ballot) when voting is required at the AGM.
 
 ## See also
 
-- [Meetings overview](/playbook/meetings/overview)
+- [Meetings overview](/help/meetings/overview)
