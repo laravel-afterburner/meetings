@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('status', 32)->default('open');
             $table->foreignId('created_by_user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamp('completed_at')->nullable();
+            $table->timestamp('assignee_notified_at')->nullable();
+            $table->uuid('assignee_notification_id')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
 

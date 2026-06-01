@@ -4,7 +4,6 @@ namespace Afterburner\Meetings\Console\Commands;
 
 use Afterburner\Meetings\Database\Seeders\MeetingsPermissionsSeeder;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 
 class InstallCommand extends Command
 {
@@ -28,9 +27,6 @@ class InstallCommand extends Command
             '--force' => true,
         ]);
 
-        $this->info('Adding environment variables...');
-        $this->addEnvironmentVariables();
-
         if ($this->confirm('Run migrations now?', true)) {
             $this->info('Running migrations...');
             $this->call('migrate');
@@ -51,30 +47,5 @@ class InstallCommand extends Command
         $this->comment('Note: Meetings migrations load automatically from the package.');
 
         return Command::SUCCESS;
-    }
-
-    protected function addEnvironmentVariables(): void
-    {
-        $envVars = [
-            '',
-            '# Afterburner Meetings Configuration',
-            'AFTERBURNER_MEETINGS_ENABLED=true',
-            'AFTERBURNER_MEETINGS_DOCUMENTS_ENABLED=true',
-            'AFTERBURNER_MEETINGS_VOTING_ENABLED=true',
-        ];
-
-        foreach (['.env', '.env.example'] as $file) {
-            $path = base_path($file);
-            if (! File::exists($path)) {
-                continue;
-            }
-
-            $content = File::get($path);
-            foreach ($envVars as $var) {
-                if ($var && ! str_contains($content, explode('=', $var)[0])) {
-                    File::append($path, "\n".$var);
-                }
-            }
-        }
     }
 }

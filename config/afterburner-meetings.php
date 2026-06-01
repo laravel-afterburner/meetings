@@ -4,13 +4,13 @@ use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
 
 return [
 
-    'enabled' => env('AFTERBURNER_MEETINGS_ENABLED', true),
+    'enabled' => true,
 
     'calendar' => [
-        'enabled' => env('AFTERBURNER_MEETINGS_CALENDAR_ENABLED', true),
+        'enabled' => true,
     ],
 
-    'documents_enabled' => env('AFTERBURNER_MEETINGS_DOCUMENTS_ENABLED', true),
+    'documents_enabled' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -22,10 +22,10 @@ return [
     |
     */
     'documents_package' => [
-        'folder_name' => env('AFTERBURNER_MEETINGS_DOCUMENTS_FOLDER', 'Meetings'),
+        'folder_name' => 'Meetings',
     ],
 
-    'voting_enabled' => env('AFTERBURNER_MEETINGS_VOTING_ENABLED', true),
+    'voting_enabled' => true,
 
     /*
     |--------------------------------------------------------------------------
