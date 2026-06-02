@@ -8,6 +8,7 @@ use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
 use Afterburner\Meetings\Support\MeetingActionItemNotificationService;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -53,6 +54,8 @@ class CreateMeetingActionItem
         if ($assignedToUserId !== null) {
             app(MeetingActionItemNotificationService::class)->notifyAssignee($actionItem);
         }
+
+        MeetingsAuditLogger::actionItemCreated($actionItem, $user);
 
         return $actionItem;
     }

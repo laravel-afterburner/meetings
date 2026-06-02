@@ -8,6 +8,7 @@ use Afterburner\Meetings\Events\MeetingScheduled;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Listeners\NotifyMeetingAudience;
 use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -67,9 +68,17 @@ class UpdateMeeting
         $becameScheduled = $status === MeetingStatus::Scheduled
             && $meeting->status !== MeetingStatus::Scheduled;
 
+        $previousStatus = $meeting->status->value;
+
         $meeting->update($payload);
 
         $meeting = $meeting->fresh();
+
+        if ($previousStatus !== $meeting->status->value) {
+            MeetingsAuditLogger::meetingStatusChanged($meeting, $user, $previousStatus, $meeting->status->value);
+        } elseif ($meeting->isEditable() || $meeting->status === MeetingStatus::Completed) {
+            MeetingsAuditLogger::meetingUpdated($meeting, $user);
+        }
 
         if ($becameScheduled) {
             $event = new MeetingScheduled($meeting);

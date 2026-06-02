@@ -7,6 +7,7 @@ use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingAgendaItem;
 use Afterburner\Meetings\Support\MeetingReferenceRegistry;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -64,7 +65,7 @@ class CreateMeetingAgendaItem
 
         $nextSortOrder = $sortOrder ?? ((int) $meeting->agendaItems()->max('sort_order')) + 1;
 
-        return MeetingAgendaItem::query()->create([
+        $item = MeetingAgendaItem::query()->create([
             'meeting_id' => $meeting->id,
             'team_id' => $meeting->team_id,
             'title' => $title,
@@ -75,5 +76,9 @@ class CreateMeetingAgendaItem
             'sort_order' => $nextSortOrder,
             'created_by_user_id' => $user->id,
         ]);
+
+        MeetingsAuditLogger::agendaItemCreated($item, $user);
+
+        return $item;
     }
 }

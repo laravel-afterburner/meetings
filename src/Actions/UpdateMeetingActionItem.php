@@ -7,6 +7,7 @@ use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
 use Afterburner\Meetings\Support\MeetingActionItemNotificationService;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use Afterburner\Meetings\Support\TeamPermissionGate;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
@@ -96,6 +97,8 @@ class UpdateMeetingActionItem
                 $notificationService->syncAssigneeChange($actionItem, $previousAssigneeId, $assignedToUserId);
             }
         }
+
+        MeetingsAuditLogger::actionItemUpdated($actionItem, $user);
 
         return $actionItem;
     }

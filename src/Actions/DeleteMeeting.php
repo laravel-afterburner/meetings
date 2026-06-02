@@ -5,6 +5,7 @@ namespace Afterburner\Meetings\Actions;
 use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -17,6 +18,8 @@ class DeleteMeeting
         if ($meeting->status !== MeetingStatus::Draft) {
             throw new MeetingsException('Only draft meetings can be deleted.');
         }
+
+        MeetingsAuditLogger::meetingDeleted($meeting, $user);
 
         $meeting->delete();
     }

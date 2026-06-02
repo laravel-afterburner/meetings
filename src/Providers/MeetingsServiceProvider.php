@@ -41,7 +41,10 @@ use Afterburner\Playbook\Support\Playbook;
 use Afterburner\Voting\Events\BallotClosed;
 use Afterburner\Voting\Events\BallotPublished;
 use App\Models\Team;
+use App\Support\Audit\AuditCategories;
+use App\Support\DashboardSections;
 use App\Support\Navigation;
+use App\Support\NavigationActive;
 use App\Support\PackageSeederRegistry;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -102,7 +105,9 @@ class MeetingsServiceProvider extends ServiceProvider
         $this->registerPolicies();
         $this->registerMeetingReferenceProviders();
         $this->registerAuditSkipRoutes();
+        $this->registerAuditCategories();
         $this->registerNavigation();
+        $this->registerDashboardSections();
         $this->registerPlaybook();
         $this->registerVotingEventListeners();
         $this->registerActionItemEventListeners();
@@ -177,6 +182,18 @@ class MeetingsServiceProvider extends ServiceProvider
         ]);
     }
 
+    protected function registerAuditCategories(): void
+    {
+        if (! class_exists(AuditCategories::class)) {
+            return;
+        }
+
+        AuditCategories::register([
+            'meeting' => 'Meeting',
+            'calendar' => 'Calendar',
+        ]);
+    }
+
     protected function registerNavigation(): void
     {
         if (! class_exists(Navigation::class)) {
@@ -191,7 +208,7 @@ class MeetingsServiceProvider extends ServiceProvider
                 'icon' => 'user-group',
                 'order' => 20,
                 'permission' => fn ($user) => $this->canViewMeetings($user),
-                'active' => fn () => request()->routeIs('teams.meetings.*'),
+                'active' => fn () => NavigationActive::routeIs('teams.meetings.*'),
             ]);
 
             return;
@@ -202,13 +219,13 @@ class MeetingsServiceProvider extends ServiceProvider
             'icon' => 'user-group',
             'order' => 20,
             'permission' => fn ($user) => $this->canViewMeetings($user),
-            'active' => fn () => request()->routeIs('teams.meetings.*'),
+            'active' => fn () => NavigationActive::routeIs('teams.meetings.*'),
             'children' => [
                 [
                     'label' => 'Meetings',
                     'route' => 'teams.meetings.index',
                     'route_params' => fn () => $this->currentTeamRouteParams(),
-                    'active' => fn () => request()->routeIs(
+                    'active' => fn () => NavigationActive::routeIs(
                         'teams.meetings.index',
                         'teams.meetings.show',
                         'teams.meetings.in-progress',
@@ -221,7 +238,7 @@ class MeetingsServiceProvider extends ServiceProvider
                     'label' => 'Calendar',
                     'route' => 'teams.meetings.calendar',
                     'route_params' => fn () => $this->currentTeamRouteParams(),
-                    'active' => fn () => request()->routeIs('teams.meetings.calendar'),
+                    'active' => fn () => NavigationActive::routeIs('teams.meetings.calendar'),
                 ],
             ],
         ]);
@@ -247,6 +264,31 @@ class MeetingsServiceProvider extends ServiceProvider
         }
 
         return $user->can('viewAny', Meeting::class);
+    }
+
+    protected function registerDashboardSections(): void
+    {
+        if (! class_exists(DashboardSections::class)) {
+            return;
+        }
+
+        DashboardSections::register([
+            'key' => 'zone.personal.action_items',
+            'label' => 'Action items',
+            'description' => 'Meeting action items assigned to you.',
+            'group' => 'Personal',
+            'group_order' => 30,
+            'order' => 10,
+        ]);
+
+        DashboardSections::register([
+            'key' => 'zone.schedule.meetings',
+            'label' => 'Meetings',
+            'description' => 'Upcoming meetings on the schedule.',
+            'group' => 'Schedule',
+            'group_order' => 40,
+            'order' => 10,
+        ]);
     }
 
     protected function registerPlaybook(): void

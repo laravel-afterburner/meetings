@@ -7,6 +7,7 @@ use Afterburner\Meetings\Enums\MeetingType;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\MeetingAudienceService;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
@@ -36,7 +37,7 @@ class CreateMeeting
 
         $roles = $targetRoleSlugs ?? $this->audienceService->defaultRolesForType($type->value);
 
-        return Meeting::query()->create([
+        $meeting = Meeting::query()->create([
             'team_id' => $team->id,
             'created_by_user_id' => $user->id,
             'title' => $title,
@@ -48,5 +49,9 @@ class CreateMeeting
             'scheduled_at' => $scheduledAt,
             'target_role_slugs' => $roles,
         ]);
+
+        MeetingsAuditLogger::meetingCreated($meeting, $user);
+
+        return $meeting;
     }
 }

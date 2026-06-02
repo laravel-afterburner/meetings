@@ -4,6 +4,7 @@ namespace Afterburner\Meetings\Actions;
 
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\CalendarEvent;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;
@@ -31,7 +32,7 @@ class CreateCalendarEvent
             throw new MeetingsException('The event end must be after the start.');
         }
 
-        return CalendarEvent::query()->create([
+        $event = CalendarEvent::query()->create([
             'team_id' => $team->id,
             'created_by_user_id' => $user->id,
             'title' => $title,
@@ -41,5 +42,9 @@ class CreateCalendarEvent
             'all_day' => $allDay,
             'location' => $location,
         ]);
+
+        MeetingsAuditLogger::calendarEventSaved($event, $user, wasCreated: true);
+
+        return $event;
     }
 }

@@ -4,6 +4,7 @@ namespace Afterburner\Meetings\Actions;
 
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -32,6 +33,10 @@ class UpdateMeetingMinutes
 
         $meeting->update($payload);
 
-        return $meeting->fresh();
+        $meeting = $meeting->fresh();
+
+        MeetingsAuditLogger::minutesUpdated($meeting, $user, $finalize);
+
+        return $meeting;
     }
 }

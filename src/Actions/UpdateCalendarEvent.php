@@ -4,6 +4,7 @@ namespace Afterburner\Meetings\Actions;
 
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\CalendarEvent;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -35,6 +36,10 @@ class UpdateCalendarEvent
             'location' => $location,
         ]);
 
-        return $event->fresh();
+        $event = $event->fresh();
+
+        MeetingsAuditLogger::calendarEventSaved($event, $user, wasCreated: false);
+
+        return $event;
     }
 }

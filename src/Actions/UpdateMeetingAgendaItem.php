@@ -5,6 +5,7 @@ namespace Afterburner\Meetings\Actions;
 use Afterburner\Meetings\Enums\AgendaSection;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Models\MeetingAgendaItem;
+use Afterburner\Meetings\Support\MeetingsAuditLogger;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -33,6 +34,10 @@ class UpdateMeetingAgendaItem
             'section' => $section,
         ]);
 
-        return $agendaItem->fresh(['reference']);
+        $agendaItem = $agendaItem->fresh(['reference']);
+
+        MeetingsAuditLogger::agendaItemUpdated($agendaItem, $user);
+
+        return $agendaItem;
     }
 }

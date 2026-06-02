@@ -44,7 +44,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $team->id, 'manage_meetings');
+        return TeamPermissionGate::allows($user, $team->id, 'create_meetings');
     }
 
     public function update(User $user, Meeting $meeting): bool
@@ -57,7 +57,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'edit_meetings')
             && ($meeting->isEditable() || $meeting->status === MeetingStatus::Completed);
     }
 
@@ -71,7 +71,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings');
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'delete_meetings');
     }
 
     public function manageAttendance(User $user, Meeting $meeting): bool
@@ -82,6 +82,10 @@ class MeetingPolicy
 
         if (! SubscriptionEntitlementGate::allows($meeting->team)) {
             return false;
+        }
+
+        if (TeamPermissionGate::allows($user, $meeting->team_id, 'conduct_meetings')) {
+            return true;
         }
 
         return app(AttendanceRecorderResolver::class)->canRecord($user, $meeting);
@@ -98,7 +102,7 @@ class MeetingPolicy
         }
 
         if ($meeting->status === MeetingStatus::Completed
-            && TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')) {
+            && TeamPermissionGate::allows($user, $meeting->team_id, 'save_meeting_minutes')) {
             return true;
         }
 
@@ -115,7 +119,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings');
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'edit_meetings');
     }
 
     public function attachDocuments(User $user, Meeting $meeting): bool
@@ -128,7 +132,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'edit_meetings')
             && $meeting->isEditable();
     }
 
@@ -142,7 +146,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'conduct_meetings')
             && $meeting->status === MeetingStatus::Scheduled;
     }
 
@@ -170,7 +174,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'conduct_meetings')
             && $meeting->status === MeetingStatus::InProgress;
     }
 
@@ -184,7 +188,7 @@ class MeetingPolicy
             return false;
         }
 
-        return TeamPermissionGate::allows($user, $meeting->team_id, 'manage_meetings')
+        return TeamPermissionGate::allows($user, $meeting->team_id, 'edit_meetings')
             && $meeting->status === MeetingStatus::Completed;
     }
 
