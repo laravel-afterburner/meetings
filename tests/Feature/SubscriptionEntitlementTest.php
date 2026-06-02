@@ -138,6 +138,7 @@ class SubscriptionEntitlementTest extends TestCase
             now()->subDay(),
             ['features' => ['meetings']],
         );
+        $team->simulateActiveSubscription();
 
         $this->assertTrue(Gate::forUser($user)->allows('viewAny', Meeting::class));
         $this->assertTrue(Gate::forUser($user)->allows('create', [Meeting::class, $team]));
@@ -166,6 +167,7 @@ class SubscriptionEntitlementTest extends TestCase
             now()->subDay(),
             ['features' => ['meetings']],
         );
+        $team->simulateActiveSubscription();
 
         $this->assertTrue(Gate::forUser($member)->allows('viewAny', Meeting::class));
         $this->assertFalse(Gate::forUser($member)->allows('create', [Meeting::class, $team]));
@@ -177,6 +179,7 @@ class SubscriptionEntitlementTest extends TestCase
 
         $this->enableSubscriptions();
         $team = $this->applySubscriptionState($team, $user, planFeatures: ['max_meetings' => 2]);
+        $team->simulateActiveSubscription();
 
         $this->assertTrue(SubscriptionEntitlementGate::withinLimit($team, 'max_meetings', 2));
         $this->assertFalse(SubscriptionEntitlementGate::withinLimit($team, 'max_meetings', 3));

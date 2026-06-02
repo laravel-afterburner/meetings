@@ -9,12 +9,21 @@ trait SimulatesSubscriptionEntitlements
      */
     protected array $simulatedPlanFeatures = [];
 
+    protected bool $simulatedActiveSubscription = false;
+
     /**
      * @param  array<string, mixed>  $features
      */
     public function simulatePlanFeatures(array $features): static
     {
         $this->simulatedPlanFeatures = $features;
+
+        return $this;
+    }
+
+    public function simulateActiveSubscription(bool $active = true): static
+    {
+        $this->simulatedActiveSubscription = $active;
 
         return $this;
     }
@@ -50,5 +59,14 @@ trait SimulatesSubscriptionEntitlements
         }
 
         return $current <= (int) $limit;
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->simulatedActiveSubscription) {
+            return true;
+        }
+
+        return $this->onGenericTrial();
     }
 }
