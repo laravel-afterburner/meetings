@@ -114,6 +114,7 @@ class MeetingsServiceProvider extends ServiceProvider
         $this->app->booted(fn () => $this->registerDocumentGuards());
 
         $this->registerPackageSeeder();
+        $this->registerSubscriptionPackageFeatures();
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -330,6 +331,20 @@ class MeetingsServiceProvider extends ServiceProvider
         if (class_exists(PackageSeederRegistry::class)) {
             PackageSeederRegistry::register(MeetingsPermissionsSeeder::class);
         }
+    }
+
+    protected function registerSubscriptionPackageFeatures(): void
+    {
+        if (! class_exists(\Afterburner\Subscriptions\Support\SubscriptionPackageFeatures::class)) {
+            return;
+        }
+
+        \Afterburner\Subscriptions\Support\SubscriptionPackageFeatures::register('meetings', 'Events', [
+            'Council meetings, AGMs & sessions',
+            'Meeting notices',
+            'Calendar & ICS subscription',
+            'Action items',
+        ]);
     }
 
     protected function registerDocumentGuards(): void
