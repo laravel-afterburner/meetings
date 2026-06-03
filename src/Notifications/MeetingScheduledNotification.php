@@ -28,7 +28,7 @@ class MeetingScheduledNotification extends Notification
         ]);
         $scheduled = TeamDateTime::format($team, $this->meeting->scheduled_at);
 
-        return (new MailMessage)
+        return team_mail_message($team)
             ->subject('Meeting scheduled: '.$this->meeting->title)
             ->greeting('Hello '.$notifiable->name.'!')
             ->line('A meeting has been scheduled for '.$team->name.'.')
