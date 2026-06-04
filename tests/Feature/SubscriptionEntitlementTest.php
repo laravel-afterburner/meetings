@@ -169,7 +169,7 @@ class SubscriptionEntitlementTest extends TestCase
         );
         $team->simulateActiveSubscription();
 
-        $this->assertTrue(Gate::forUser($member)->allows('viewAny', Meeting::class));
+        $this->assertFalse(Gate::forUser($member)->allows('viewAny', Meeting::class));
         $this->assertFalse(Gate::forUser($member)->allows('create', [Meeting::class, $team]));
     }
 

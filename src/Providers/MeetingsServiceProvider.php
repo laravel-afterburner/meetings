@@ -34,6 +34,7 @@ use Afterburner\Meetings\Policies\MeetingPolicy;
 use Afterburner\Meetings\Support\DefaultMeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Support\DocumentsIntegration;
 use Afterburner\Meetings\Support\MeetingCompiledDocumentGuard;
+use Afterburner\Meetings\Support\MeetingsPermissions;
 use Afterburner\Meetings\Support\MeetingReferenceRegistry;
 use Afterburner\Meetings\Support\MeetingsDocumentFolder;
 use Afterburner\Meetings\Support\VotingIntegration;
@@ -226,6 +227,8 @@ class MeetingsServiceProvider extends ServiceProvider
                     'label' => 'Meetings',
                     'route' => 'teams.meetings.index',
                     'route_params' => fn () => $this->currentTeamRouteParams(),
+                    'permission' => fn ($user) => $user?->currentTeam
+                        && MeetingsPermissions::canViewSection($user, $user->currentTeam, MeetingsPermissions::SECTION_MEETINGS),
                     'active' => fn () => NavigationActive::routeIs(
                         'teams.meetings.index',
                         'teams.meetings.show',
@@ -239,6 +242,8 @@ class MeetingsServiceProvider extends ServiceProvider
                     'label' => 'Calendar',
                     'route' => 'teams.meetings.calendar',
                     'route_params' => fn () => $this->currentTeamRouteParams(),
+                    'permission' => fn ($user) => $user?->currentTeam
+                        && MeetingsPermissions::canViewSection($user, $user->currentTeam, MeetingsPermissions::SECTION_CALENDAR),
                     'active' => fn () => NavigationActive::routeIs('teams.meetings.calendar'),
                 ],
             ],
@@ -264,7 +269,7 @@ class MeetingsServiceProvider extends ServiceProvider
             return false;
         }
 
-        return $user->can('viewAny', Meeting::class);
+        return MeetingsPermissions::canAccessModule($user, $user->currentTeam);
     }
 
     protected function registerDashboardSections(): void

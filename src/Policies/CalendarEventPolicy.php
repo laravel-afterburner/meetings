@@ -3,6 +3,7 @@
 namespace Afterburner\Meetings\Policies;
 
 use Afterburner\Meetings\Models\CalendarEvent;
+use Afterburner\Meetings\Support\MeetingsPermissions;
 use Afterburner\Meetings\Support\SubscriptionEntitlementGate;
 use Afterburner\Meetings\Support\TeamPermissionGate;
 use App\Models\Team;
@@ -19,7 +20,8 @@ class CalendarEventPolicy
             return false;
         }
 
-        return SubscriptionEntitlementGate::allows($user->currentTeam);
+        return SubscriptionEntitlementGate::allows($user->currentTeam)
+            && MeetingsPermissions::canViewSection($user, $user->currentTeam, MeetingsPermissions::SECTION_CALENDAR);
     }
 
     public function view(User $user, CalendarEvent $event): bool

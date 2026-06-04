@@ -63,7 +63,12 @@ class Calendar extends Component
 
         abort_unless(config('afterburner-meetings.calendar.enabled', true), 404);
 
-        abort_unless(Auth::user()->can('viewAny', CalendarEvent::class), 403);
+        $user = Auth::user();
+
+        abort_unless(
+            \Afterburner\Meetings\Support\MeetingsPermissions::canViewSection($user, $team, \Afterburner\Meetings\Support\MeetingsPermissions::SECTION_CALENDAR),
+            403
+        );
 
         $this->teamId = $team->id;
         $this->resolveDisplayTimezoneMode($team);

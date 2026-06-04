@@ -6,6 +6,7 @@ use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\AttendanceRecorderResolver;
 use Afterburner\Meetings\Support\DocumentsIntegration;
+use Afterburner\Meetings\Support\MeetingsPermissions;
 use Afterburner\Meetings\Support\SubscriptionEntitlementGate;
 use Afterburner\Meetings\Support\TeamPermissionGate;
 use App\Models\Team;
@@ -22,7 +23,11 @@ class MeetingPolicy
             return false;
         }
 
-        return SubscriptionEntitlementGate::allows($user->currentTeam);
+        if (! SubscriptionEntitlementGate::allows($user->currentTeam)) {
+            return false;
+        }
+
+        return MeetingsPermissions::canAccessModule($user, $user->currentTeam);
     }
 
     public function view(User $user, Meeting $meeting): bool
@@ -31,7 +36,15 @@ class MeetingPolicy
             return false;
         }
 
-        return SubscriptionEntitlementGate::allows($meeting->team);
+        if (! SubscriptionEntitlementGate::allows($meeting->team)) {
+            return false;
+        }
+
+        return MeetingsPermissions::canViewSection($user, $meeting->team, MeetingsPermissions::SECTION_MEETINGS)
+            || TeamPermissionGate::allowsAny($user, $meeting->team_id, [
+                'create_meetings',
+                'manage_meetings',
+            ]);
     }
 
     public function create(User $user, Team $team): bool

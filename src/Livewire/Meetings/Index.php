@@ -17,11 +17,16 @@ class Index extends Component
 
     public function mount(Team $team): void
     {
-        if (! Auth::user()->belongsToTeam($team)) {
+        $user = Auth::user();
+
+        if (! $user->belongsToTeam($team)) {
             abort(403, 'Access denied.');
         }
 
-        abort_unless(Auth::user()->can('viewAny', Meeting::class), 403);
+        abort_unless(
+            \Afterburner\Meetings\Support\MeetingsPermissions::canViewSection($user, $team, \Afterburner\Meetings\Support\MeetingsPermissions::SECTION_MEETINGS),
+            403
+        );
 
         $this->teamId = $team->id;
     }
