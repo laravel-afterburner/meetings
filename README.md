@@ -9,6 +9,31 @@ composer require laravel-afterburner/meetings
 php artisan afterburner:meetings:install
 ```
 
+### Tailwind CSS (required for production builds)
+
+The calendar and other UI rely on Tailwind classes defined in this package’s Blade views (including arbitrary values like `min-h-[9rem]` and `text-[11px]`). Your app’s production CSS build only includes classes Tailwind finds in its `content` paths.
+
+Add the package paths to `tailwind.config.js` in the host application (adjust if you use a different vendor layout):
+
+```js
+content: [
+    // ...existing paths...
+    './vendor/laravel-afterburner/meetings/resources/views/**/*.blade.php',
+    './vendor/laravel-afterburner/meetings/src/**/*.php',
+    './resources/views/vendor/afterburner-meetings/**/*.blade.php',
+],
+```
+
+Then rebuild frontend assets (`npm run build`) and redeploy. Without this, the calendar may look correct in local `npm run dev` (compiled views under `storage/framework/views` can be scanned) but break on production where assets are built before those files exist.
+
+If you use several Afterburner packages, you can scan all of them at once:
+
+```js
+'./vendor/laravel-afterburner/*/resources/views/**/*.blade.php',
+'./vendor/laravel-afterburner/*/src/**/*.php',
+'./resources/views/vendor/afterburner-*/**/*.blade.php',
+```
+
 Add the `HasMeetings` trait to your `App\Models\Team` model:
 
 ```php
