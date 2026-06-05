@@ -39,14 +39,30 @@ class CalendarFeedToken
 
     public static function feedUrl(User $user, Team $team): string
     {
-        return route('teams.meetings.calendar.feed', [
-            'team' => $team->id,
-            'token' => self::generate($user, $team),
-        ]);
+        $url = route('teams.meetings.calendar.feed', [
+            'teamId' => $team->id,
+        ], absolute: true).'?token='.rawurlencode(self::generate($user, $team));
+
+        return self::ensureHttps($url);
     }
 
     public static function webcalUrl(User $user, Team $team): string
     {
-        return preg_replace('/^https?:\/\//', 'webcal://', self::feedUrl($user, $team)) ?? self::feedUrl($user, $team);
+        $url = self::feedUrl($user, $team);
+
+        return preg_replace('/^https:\/\//', 'webcal://', $url) ?? $url;
+    }
+
+    protected static function ensureHttps(string $url): string
+    {
+        if (! str_starts_with($url, 'http://')) {
+            return $url;
+        }
+
+        if (request()->isSecure() || config('afterburner-meetings.calendar.feed_force_https', false)) {
+            return 'https://'.substr($url, 7);
+        }
+
+        return $url;
     }
 }

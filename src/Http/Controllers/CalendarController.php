@@ -3,7 +3,7 @@
 namespace Afterburner\Meetings\Http\Controllers;
 
 use Afterburner\Meetings\Models\CalendarEvent;
-use Afterburner\Meetings\Models\Meeting;
+use Afterburner\Meetings\Support\CalendarFeedAccess;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
 use Afterburner\Meetings\Support\IcsCalendarExporter;
@@ -29,8 +29,10 @@ class CalendarController
         ]);
     }
 
-    public function feed(Team $team, Request $request): Response
+    public function feed(int $teamId, Request $request): Response
     {
+        $team = Team::query()->findOrFail($teamId);
+
         $token = $request->query('token');
 
         if (! is_string($token) || $token === '') {
@@ -49,7 +51,7 @@ class CalendarController
             abort(404);
         }
 
-        abort_unless($user->can('viewAny', Meeting::class), 403);
+        abort_unless(CalendarFeedAccess::allows($user, $team), 403);
 
         $timezone = TeamDateTime::teamTimezone($team);
         $rangeStart = Carbon::now($timezone)->subMonths(6)->startOfMonth();

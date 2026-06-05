@@ -5,10 +5,14 @@ use Afterburner\Meetings\Http\Controllers\MeetingsController;
 use Afterburner\Meetings\Models\Meeting;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['web'])->group(function () {
-    Route::get('/teams/{team}/meetings/calendar/feed.ics', [CalendarController::class, 'feed'])
-        ->name('teams.meetings.calendar.feed');
-});
+/*
+| Calendar feed is fetched by external apps without a login session. Keep it
+| outside the web middleware group so host apps do not run session/team
+| middleware that expects Auth::user()->currentTeam.
+*/
+Route::get('/teams/{teamId}/meetings/calendar/feed.ics', [CalendarController::class, 'feed'])
+    ->name('teams.meetings.calendar.feed')
+    ->whereNumber('teamId');
 
 Route::middleware(['web', 'auth', 'verified'])->group(function () {
     Route::get('/teams/{team}/meetings', [MeetingsController::class, 'index'])

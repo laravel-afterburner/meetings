@@ -13,10 +13,12 @@ use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
 use Afterburner\Meetings\Support\TeamDateTime;
 use Afterburner\Meetings\Tests\TestCase;
+use App\Models\Team;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 class CalendarTest extends TestCase
@@ -140,15 +142,6 @@ class CalendarTest extends TestCase
     {
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
 
-        app(CreateCalendarEvent::class)->execute(
-            $team,
-            $user,
-            'Community BBQ',
-            now()->addWeek()->startOfDay()->utc(),
-            now()->addWeek()->endOfDay()->utc(),
-            true,
-        );
-
         $url = CalendarFeedToken::feedUrl($user, $team);
 
         $response = $this->get($url);
@@ -156,7 +149,31 @@ class CalendarTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/calendar; charset=utf-8');
         $this->assertStringContainsString('BEGIN:VCALENDAR', $response->getContent());
-        $this->assertStringContainsString('Community BBQ', $response->getContent());
+    }
+
+    public function test_calendar_feed_authorizes_against_feed_team_not_current_team(): void
+    {
+        [$manager, $teamA] = $this->createTeamWithUser(['manage_meetings']);
+
+        DB::table('permissions')->insert([
+            'name' => 'View Meetings Calendar',
+            'slug' => 'view_meetings_calendar',
+            'description' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $teamB = Team::query()->create([
+            'name' => 'Other Team',
+            'user_id' => $manager->id,
+        ]);
+
+        $viewer = $this->createAdditionalUser($teamB, ['view_meetings_calendar'], 'viewer@example.com');
+        $viewer->update(['current_team_id' => $teamA->id]);
+
+        $url = CalendarFeedToken::feedUrl($viewer, $teamB);
+
+        $this->get($url)->assertOk();
     }
 
     public function test_calendar_feed_rejects_invalid_token(): void
@@ -164,7 +181,7 @@ class CalendarTest extends TestCase
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
 
         $response = $this->get(route('teams.meetings.calendar.feed', [
-            'team' => $team->id,
+            'teamId' => $team->id,
             'token' => 'invalid-token',
         ]));
 

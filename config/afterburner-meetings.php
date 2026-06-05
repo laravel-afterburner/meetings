@@ -8,6 +8,12 @@ return [
 
     'calendar' => [
         'enabled' => true,
+
+        /*
+        | When true, calendar feed URLs always use https:// even if APP_URL is http://.
+        | By default, http is upgraded to https only when the page request is secure.
+        */
+        'feed_force_https' => false,
     ],
 
     'documents_enabled' => true,
@@ -126,7 +132,9 @@ return [
     ],
 
     'audit' => [
-        'skip_routes' => [],
+        'skip_routes' => [
+            'teams.meetings.calendar.feed',
+        ],
     ],
 
 ];
