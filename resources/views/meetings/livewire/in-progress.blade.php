@@ -1,5 +1,5 @@
 <div class="space-y-8">
-    <div class="rounded-lg border border-amber-200 bg-amber-50 p-6 shadow-sm dark:border-amber-800 dark:bg-amber-950/30">
+    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-6 dark:border-amber-800 dark:bg-amber-950/30">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <p class="text-sm font-medium text-amber-900 dark:text-amber-200">Meeting in progress</p>

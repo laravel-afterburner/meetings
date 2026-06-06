@@ -1,25 +1,36 @@
 <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4" wire:key="calendar-toolbar-{{ $month }}">
-        <div
-            class="flex items-center gap-2"
-            x-data="{ cancelSelect() { $dispatch('calendar-cancel-select') } }"
-        >
-            <x-secondary-button type="button" wire:click="previousMonth" x-on:mousedown="cancelSelect()" no-spinner aria-label="Previous month">
-                &larr;
-            </x-secondary-button>
-            <x-secondary-button type="button" wire:click="goToToday" x-on:mousedown="cancelSelect()" no-spinner>
-                Today
-            </x-secondary-button>
-            <x-secondary-button type="button" wire:click="nextMonth" x-on:mousedown="cancelSelect()" no-spinner aria-label="Next month">
-                &rarr;
-            </x-secondary-button>
-            <h2 class="ml-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+    <div class="mb-6 space-y-4" wire:key="calendar-toolbar-{{ $month }}">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div
+                class="flex shrink-0 items-center gap-2"
+                x-data="{ cancelSelect() { $dispatch('calendar-cancel-select') } }"
+            >
+                <x-secondary-button type="button" wire:click="previousMonth" x-on:mousedown="cancelSelect()" no-spinner aria-label="Previous month">
+                    &larr;
+                </x-secondary-button>
+                <x-secondary-button type="button" wire:click="goToToday" x-on:mousedown="cancelSelect()" no-spinner>
+                    Today
+                </x-secondary-button>
+                <x-secondary-button type="button" wire:click="nextMonth" x-on:mousedown="cancelSelect()" no-spinner aria-label="Next month">
+                    &rarr;
+                </x-secondary-button>
+            </div>
+
+            @if ($canCreate)
+                <x-button type="button" wire:click="openCreateForDate('{{ $todayDate }}')" no-spinner class="shrink-0">
+                    Add event
+                </x-button>
+            @endif
+        </div>
+
+        <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {{ $monthLabel }}
             </h2>
             <span class="text-sm text-gray-500 dark:text-gray-400">({{ $timezone }})</span>
 
             @if ($canChooseDisplayTimezone)
-                <div class="ml-2 inline-flex rounded-md border border-gray-200 p-0.5 dark:border-gray-600" role="group" aria-label="Calendar time zone">
+                <div class="inline-flex rounded-md border border-gray-200 p-0.5 dark:border-gray-600" role="group" aria-label="Calendar time zone">
                     <button
                         type="button"
                         wire:click="setDisplayTimezoneMode('user')"
@@ -47,17 +58,11 @@
                 </div>
             @endif
         </div>
-
-        @if ($canCreate)
-            <x-button type="button" wire:click="openCreateForDate('{{ $todayDate }}')" no-spinner>
-                Add event
-            </x-button>
-        @endif
     </div>
 
     <div
         wire:key="calendar-grid-{{ $month }}"
-        class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+        class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
         x-data="{
             selecting: false,
             anchor: null,
@@ -100,9 +105,9 @@
         x-on:mouseup.window="finishSelect()"
         x-on:calendar-scroll-to-month-start.window="$nextTick(() => document.getElementById('calendar-month-anchor')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))"
     >
-        <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+        <div class="grid min-w-[36rem] grid-cols-7 border-b border-gray-200 bg-gray-50 text-[10px] font-medium uppercase tracking-wider text-gray-500 sm:min-w-[42rem] sm:text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
             @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $weekday)
-                <div class="px-3 py-2 text-center">{{ $weekday }}</div>
+                <div class="px-1 py-2 text-center sm:px-3">{{ $weekday }}</div>
             @endforeach
         </div>
 
@@ -112,10 +117,10 @@
                 $laneCount = max($week['laneCount'], 1);
                 $barAreaHeight = $week['laneCount'] > 0 ? ($week['laneCount'] * 1.375 + 0.25).'rem' : '0.25rem';
             @endphp
-            <div wire:key="calendar-week-{{ $weekKey }}" class="relative grid grid-cols-7 border-b border-gray-200 last:border-b-0 dark:border-gray-700">
+            <div wire:key="calendar-week-{{ $weekKey }}" class="relative grid min-w-[36rem] grid-cols-7 border-b border-gray-200 last:border-b-0 sm:min-w-[42rem] dark:border-gray-700">
                 @foreach ($week['days'] as $day)
                     @php
-                        $dayCellClasses = 'min-h-[9rem] border-r border-gray-200 p-2 last:border-r-0 dark:border-gray-700';
+                        $dayCellClasses = 'min-h-[5.5rem] border-r border-gray-200 p-1 last:border-r-0 sm:min-h-[7rem] sm:p-2 lg:min-h-[9rem] dark:border-gray-700';
                         if (! $day['inMonth']) {
                             $dayCellClasses .= ' bg-gray-50/70 dark:bg-gray-900/40';
                         }
@@ -176,23 +181,11 @@
                                     $chipClasses = $isMeeting
                                         ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-100 dark:hover:bg-blue-900/70'
                                         : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100 dark:hover:bg-emerald-900/70';
+                                    $entryId = (int) str_replace($isMeeting ? 'meeting-' : 'event-', '', $entry->id);
                                     $clickAction = $isMeeting
-                                        ? null
-                                        : 'openEditEvent('.(int) str_replace('event-', '', $entry->id).')';
+                                        ? 'openShowMeeting('.$entryId.')'
+                                        : 'openShowEvent('.$entryId.')';
                                 @endphp
-                                @if ($isMeeting)
-                                    <a
-                                        href="{{ $entry->url }}"
-                                        wire:navigate
-                                        wire:key="calendar-timed-{{ $day['date'] }}-{{ $entry->id }}-{{ $timed['lane'] }}-{{ $timed['column'] }}"
-                                        class="absolute truncate rounded px-1 py-0.5 text-left text-[11px] leading-4 {{ $chipClasses }}"
-                                        style="top: {{ $timed['lane'] * $timedRowHeight }}rem; left: calc({{ $columnLeft }}% + 1px); width: calc({{ $columnWidth }}% - 2px);"
-                                        title="{{ $timed['timeRangeLabel'] }} · {{ $entry->title }}"
-                                    >
-                                        <span class="font-semibold">{{ $timed['timeLabel'] }}</span>
-                                        <span class="ml-1">{{ $entry->title }}</span>
-                                    </a>
-                                @else
                                 <button
                                     type="button"
                                     wire:key="calendar-timed-{{ $day['date'] }}-{{ $entry->id }}-{{ $timed['lane'] }}-{{ $timed['column'] }}"
@@ -204,7 +197,6 @@
                                     <span class="font-semibold">{{ $timed['timeLabel'] }}</span>
                                     <span class="ml-1">{{ $entry->title }}</span>
                                 </button>
-                                @endif
                             @endforeach
                         </div>
                     </div>
@@ -227,31 +219,16 @@
                                     .' '
                                     .($bar['segmentEnd'] ? 'rounded-r-md' : 'rounded-r-none')
                                 );
+                                $entryId = (int) str_replace($isMeeting ? 'meeting-' : 'event-', '', $entry->id);
                                 $barClick = $isMeeting
-                                    ? null
-                                    : 'openEditEvent('.(int) str_replace('event-', '', $entry->id).')';
+                                    ? 'openShowMeeting('.$entryId.')'
+                                    : 'openShowEvent('.$entryId.')';
                                 if (! $bar['segmentEnd']) {
                                     $barClasses .= $isMeeting
                                         ? ' border-r border-blue-200 dark:border-blue-800/60'
                                         : ' border-r border-emerald-200 dark:border-emerald-800/60';
                                 }
                             @endphp
-                            @if ($isMeeting)
-                                <a
-                                    href="{{ $entry->url }}"
-                                    wire:navigate
-                                    wire:key="calendar-bar-{{ $weekKey }}-{{ $entry->id }}-{{ $bar['startCol'] }}"
-                                    class="pointer-events-auto h-5 truncate px-1.5 text-left text-[11px] font-medium leading-5 shadow-sm {{ $barClasses }} {{ $roundedClasses }}"
-                                    style="grid-column: {{ $bar['startCol'] + 1 }} / {{ $bar['endCol'] + 2 }}; grid-row: {{ $bar['lane'] + 1 }};"
-                                    title="{{ $entry->title }}"
-                                >
-                                    @if ($bar['showLabel'])
-                                        {{ $entry->title }}
-                                    @else
-                                        <span class="sr-only">{{ $entry->title }}</span>
-                                    @endif
-                                </a>
-                            @else
                             <button
                                 type="button"
                                 wire:key="calendar-bar-{{ $weekKey }}-{{ $entry->id }}-{{ $bar['startCol'] }}"
@@ -266,7 +243,6 @@
                                     <span class="sr-only">{{ $entry->title }}</span>
                                 @endif
                             </button>
-                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -288,7 +264,7 @@
         @endif
     </div>
 
-    <div class="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div class="mt-8 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Subscribe in Apple Calendar or Google Calendar</h3>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Use this private link to follow your team calendar. Meetings and calendar events sync automatically when apps refresh the subscription.
@@ -308,11 +284,107 @@
         </p>
     </div>
 
+    @if ($showEntryModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0" wire:keydown.escape.window="closeEntryModal">
+            <div class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80" wire:click="closeEntryModal"></div>
+
+            <div class="relative mx-auto max-w-lg rounded-lg bg-white p-4 shadow-xl sm:p-6 dark:bg-gray-800">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ $viewTypeLabel }}
+                            @if ($viewStatusLabel)
+                                · {{ $viewStatusLabel }}
+                            @endif
+                        </p>
+                        <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {{ $viewTitle }}
+                        </h3>
+                    </div>
+
+                    @if ($viewingCanEdit)
+                        @if ($viewingEntryKind === 'event')
+                            <button
+                                type="button"
+                                wire:click="editEventFromView"
+                                class="shrink-0 rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                title="Edit event"
+                            >
+                                <span class="sr-only">Edit event</span>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                        @else
+                            <a
+                                href="{{ $viewEditUrl }}"
+                                wire:navigate
+                                class="shrink-0 rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                title="Edit meeting"
+                            >
+                                <span class="sr-only">Edit meeting</span>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </a>
+                        @endif
+                    @endif
+                </div>
+
+                <dl class="mt-4 space-y-4 text-sm">
+                    <div>
+                        <dt class="font-medium text-gray-900 dark:text-gray-100">When</dt>
+                        <dd class="mt-1 text-gray-600 dark:text-gray-400">{{ $viewScheduleLabel }}</dd>
+                    </div>
+
+                    @if ($viewLocation)
+                        <div>
+                            <dt class="font-medium text-gray-900 dark:text-gray-100">Location</dt>
+                            <dd class="mt-1 text-gray-600 dark:text-gray-400">{{ $viewLocation }}</dd>
+                        </div>
+                    @endif
+
+                    @if ($viewVirtualLink)
+                        <div>
+                            <dt class="font-medium text-gray-900 dark:text-gray-100">Virtual meeting</dt>
+                            <dd class="mt-1">
+                                <a href="{{ $viewVirtualLink }}" target="_blank" rel="noopener noreferrer"
+                                   class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+                                    Join virtual meeting
+                                </a>
+                            </dd>
+                        </div>
+                    @endif
+
+                    @if ($viewDescription)
+                        <div>
+                            <dt class="font-medium text-gray-900 dark:text-gray-100">
+                                {{ $viewingEntryKind === 'meeting' ? 'Agenda notes' : 'Notes' }}
+                            </dt>
+                            <dd class="mt-1 whitespace-pre-wrap text-gray-600 dark:text-gray-400">{{ $viewDescription }}</dd>
+                        </div>
+                    @endif
+                </dl>
+
+                <div class="mt-6 flex flex-wrap items-center justify-end gap-3">
+                    @if ($viewEntryUrl)
+                        <a href="{{ $viewEntryUrl }}" wire:navigate class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+                            Open meeting
+                        </a>
+                    @endif
+                    <x-secondary-button type="button" wire:click="closeEntryModal" no-spinner>
+                        Close
+                    </x-secondary-button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if ($showEventModal)
         <div class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0" wire:keydown.escape.window="closeEventModal">
             <div class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80" wire:click="closeEventModal"></div>
 
-            <div class="relative mx-auto max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <div class="relative mx-auto max-w-lg rounded-lg bg-white p-4 shadow-xl sm:p-6 dark:bg-gray-800">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     {{ $editingEventId ? 'Edit event' : 'New event' }}
                 </h3>

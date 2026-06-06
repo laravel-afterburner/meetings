@@ -3,7 +3,7 @@
         title="Meeting details"
         :description="$detailsOnly ? 'Update basic meeting information after the meeting has concluded.' : 'Title, schedule, location, and who is invited to this meeting.'"
     >
-        <form wire:submit.prevent="saveDraft" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <form wire:submit.prevent="saveDraft" class="space-y-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
             @if ($isEditing && $meeting)
                 <div class="flex flex-wrap items-center gap-2">
                     <span @class([
@@ -21,8 +21,8 @@
                 <x-input-error for="title" class="mt-2" />
             </div>
 
-            <div class="flex flex-wrap items-end gap-4">
-                <div class="w-44">
+            <div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+                <div class="w-full sm:w-44">
                     <x-label for="type" value="Meeting type" />
                     <x-select-input id="type" wire:model.live="type" class="mt-1 block w-full" :disabled="$detailsOnly">
                         <option value="agm">Annual General</option>

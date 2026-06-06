@@ -1,5 +1,5 @@
 <div class="space-y-8">
-    <div class="rounded-lg border border-green-200 bg-green-50 p-6 shadow-sm dark:border-green-800 dark:bg-green-950/30">
+    <div class="rounded-lg border border-green-200 bg-green-50 p-4 shadow-sm sm:p-6 dark:border-green-800 dark:bg-green-950/30">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <p class="text-sm font-medium text-green-900 dark:text-green-200">Wrap up meeting</p>
@@ -47,7 +47,7 @@
                     'meetingId' => $meeting->id,
                 ], key('meeting-minutes-completed-'.$meeting->id))
             @else
-                <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex flex-wrap items-center gap-2">
                         <x-afterburner-meetings::meeting-minutes-status-badge :meeting="$meeting" />
                     </div>

@@ -9,6 +9,8 @@ use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Enums\MeetingType;
 use Afterburner\Meetings\Exceptions\MeetingsException;
 use Afterburner\Meetings\Livewire\Meetings\Calendar;
+use Afterburner\Meetings\Models\CalendarEvent;
+use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
 use Afterburner\Meetings\Support\TeamDateTime;
@@ -272,5 +274,109 @@ class CalendarTest extends TestCase
 
         $this->assertSame('2026-06-20', $startsAt->format('Y-m-d'));
         $this->assertSame('2026-06-20', $endsAt->format('Y-m-d'));
+    }
+
+    public function test_calendar_viewer_can_open_event_show_modal_without_edit_permission(): void
+    {
+        [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        DB::table('permissions')->insert([
+            'name' => 'View Meetings Calendar',
+            'slug' => 'view_meetings_calendar',
+            'description' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $viewer = $this->createAdditionalUser($team, ['view_meetings_calendar'], 'viewer@example.com');
+        $viewer->update(['current_team_id' => $team->id]);
+        Auth::login($viewer);
+
+        $event = CalendarEvent::query()->create([
+            'team_id' => $team->id,
+            'created_by_user_id' => $manager->id,
+            'title' => 'Community BBQ',
+            'description' => 'Bring a side dish',
+            'location' => 'Park pavilion',
+            'starts_at' => now()->addDays(2)->utc(),
+            'ends_at' => now()->addDays(2)->addHours(2)->utc(),
+            'all_day' => false,
+        ]);
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+
+        $component->openShowEvent($event->id);
+
+        $this->assertTrue($component->showEntryModal);
+        $this->assertSame('event', $component->viewingEntryKind);
+        $this->assertSame('Community BBQ', $component->viewTitle);
+        $this->assertSame('Park pavilion', $component->viewLocation);
+        $this->assertSame('Bring a side dish', $component->viewDescription);
+        $this->assertFalse($component->viewingCanEdit);
+    }
+
+    public function test_manager_can_open_event_show_modal_with_edit_permission(): void
+    {
+        [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
+        Auth::login($user);
+
+        $event = CalendarEvent::query()->create([
+            'team_id' => $team->id,
+            'created_by_user_id' => $user->id,
+            'title' => 'Board retreat',
+            'starts_at' => now()->addDays(4)->utc(),
+            'ends_at' => now()->addDays(4)->addHours(3)->utc(),
+            'all_day' => false,
+        ]);
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+
+        $component->openShowEvent($event->id);
+
+        $this->assertTrue($component->showEntryModal);
+        $this->assertTrue($component->viewingCanEdit);
+    }
+
+    public function test_calendar_viewer_can_open_meeting_show_modal_without_edit_permission(): void
+    {
+        [$manager, $team] = $this->createTeamWithUser(['manage_meetings']);
+
+        DB::table('permissions')->insert([
+            ['name' => 'View Meetings Calendar', 'slug' => 'view_meetings_calendar', 'description' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'View Meetings List', 'slug' => 'view_meetings_list', 'description' => null, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $viewer = $this->createAdditionalUser($team, ['view_meetings_calendar', 'view_meetings_list'], 'viewer@example.com');
+        $viewer->update(['current_team_id' => $team->id]);
+        Auth::login($viewer);
+
+        $meeting = Meeting::query()->create([
+            'team_id' => $team->id,
+            'created_by_user_id' => $manager->id,
+            'title' => 'Annual general meeting',
+            'type' => MeetingType::Agm,
+            'status' => MeetingStatus::Scheduled,
+            'scheduled_at' => now()->addDays(5),
+            'location' => 'Community hall',
+            'agenda_notes' => 'Election of officers',
+        ]);
+
+        $component = new Calendar;
+        $component->teamId = $team->id;
+
+        $component->openShowMeeting($meeting->id);
+
+        $this->assertTrue($component->showEntryModal);
+        $this->assertSame('meeting', $component->viewingEntryKind);
+        $this->assertSame('Annual general meeting', $component->viewTitle);
+        $this->assertSame('Community hall', $component->viewLocation);
+        $this->assertSame('Election of officers', $component->viewDescription);
+        $this->assertFalse($component->viewingCanEdit);
+        $this->assertSame(
+            route('teams.meetings.show', ['team' => $team->id, 'meeting' => $meeting->id]),
+            $component->viewEntryUrl
+        );
     }
 }

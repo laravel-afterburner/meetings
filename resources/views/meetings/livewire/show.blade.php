@@ -1,5 +1,5 @@
 <div>
-    <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ $meeting->type->label() }} · {{ $meeting->status->label() }}</p>
@@ -85,7 +85,7 @@
     @endif
 
     @if ($hasAttendance)
-        <div class="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="mt-8 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
             <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Attendance</h4>
             <div class="mt-4 space-y-3">
                 @foreach ($invitedUsers as $invitee)
@@ -113,7 +113,7 @@
     @endif
 
     @if ($showMinutes)
-        <div class="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="mt-8 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
             <div class="flex flex-wrap items-center gap-2">
                 <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Meeting minutes</h4>
                 <x-afterburner-meetings::meeting-minutes-status-badge :meeting="$meeting" />

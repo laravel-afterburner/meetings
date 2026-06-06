@@ -1,4 +1,4 @@
-<div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
     @if (! $embedded || $canManageActionItems)
     <div class="flex flex-wrap items-center justify-between gap-3 {{ $embedded ? 'justify-end' : '' }}">
         @unless ($embedded)

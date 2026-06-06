@@ -1,29 +1,29 @@
 <div>
     @if ($canCreate)
-        <div class="mb-6 flex justify-end">
+        <x-page-actions>
             <x-button href="{{ route('teams.meetings.create', ['team' => $team]) }}" wire:navigate>
                 Create meeting
             </x-button>
-        </div>
+        </x-page-actions>
     @endif
 
-    <div class="overflow-hidden bg-white shadow sm:rounded-lg dark:bg-gray-800">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+    <div class="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+        <x-responsive-table :bleed="false">
             <thead class="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <th scope="col" class="text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         Meeting
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <th scope="col" class="table-cell-md text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         Type
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <th scope="col" class="text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         Status
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <th scope="col" class="table-cell-md text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         Scheduled
                     </th>
-                    <th scope="col" class="relative px-6 py-3">
+                    <th scope="col" class="relative">
                         <span class="sr-only">Actions</span>
                     </th>
                 </tr>
@@ -39,7 +39,7 @@
                         $canWrapUp = auth()->user()->can('reviseAfterCompletion', $meeting);
                     @endphp
                     <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/50" wire:key="meeting-row-{{ $meeting->id }}">
-                        <td class="px-6 py-4">
+                        <td>
                             <a
                                 href="{{ route('teams.meetings.show', ['team' => $team, 'meeting' => $meeting]) }}"
                                 wire:navigate
@@ -53,10 +53,10 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                        <td class="table-cell-md whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                             {{ $meeting->type->label() }}
                         </td>
-                        <td class="whitespace-nowrap px-6 py-4 text-sm">
+                        <td class="whitespace-nowrap text-sm">
                             <span @class([
                                 'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
                                 $meeting->status->badgeClasses(),
@@ -64,14 +64,14 @@
                                 {{ $meeting->status->label() }}
                             </span>
                         </td>
-                        <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                        <td class="table-cell-md whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                             @if ($meeting->scheduled_at)
                                 {!! \Afterburner\Meetings\Support\TeamDateTime::formatDisplay($team, $meeting->scheduled_at) !!}
                             @else
                                 Pending
                             @endif
                         </td>
-                        <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                        <td class="whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex items-center justify-end gap-1">
                                 <x-afterburner-meetings::meeting-nav-icon
                                     action="view"
@@ -116,13 +116,13 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                             No meetings yet.
                         </td>
                     </tr>
                 @endforelse
             </tbody>
-        </table>
+        </x-responsive-table>
     </div>
 
     <div class="mt-6">

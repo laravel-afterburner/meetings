@@ -6,6 +6,7 @@ use Afterburner\Meetings\Actions\CreateCalendarEvent;
 use Afterburner\Meetings\Actions\DeleteCalendarEvent;
 use Afterburner\Meetings\Actions\UpdateCalendarEvent;
 use Afterburner\Meetings\Models\CalendarEvent;
+use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\CalendarEntry;
 use Afterburner\Meetings\Support\CalendarEventSchedule;
 use Afterburner\Meetings\Support\CalendarFeedToken;
@@ -29,6 +30,32 @@ class Calendar extends Component
     public string $month = '';
 
     public bool $showEventModal = false;
+
+    public bool $showEntryModal = false;
+
+    public ?string $viewingEntryKind = null;
+
+    public ?int $viewingEntryId = null;
+
+    public bool $viewingCanEdit = false;
+
+    public string $viewTitle = '';
+
+    public string $viewDescription = '';
+
+    public string $viewLocation = '';
+
+    public string $viewScheduleLabel = '';
+
+    public ?string $viewStatusLabel = null;
+
+    public ?string $viewTypeLabel = null;
+
+    public ?string $viewVirtualLink = null;
+
+    public ?string $viewEntryUrl = null;
+
+    public ?string $viewEditUrl = null;
 
     public ?int $editingEventId = null;
 
@@ -202,6 +229,49 @@ class Calendar extends Component
                 filled($this->endsAtLocal) ? $this->endsAtLocal : $this->startDate.'T10:00',
             );
         }
+    }
+
+    public function openShowEvent(int $eventId): void
+    {
+        $event = CalendarEvent::query()
+            ->where('team_id', $this->teamId)
+            ->findOrFail($eventId);
+
+        abort_unless(Auth::user()->can('view', $event), 403);
+
+        $team = Team::query()->findOrFail($this->teamId);
+        $this->populateViewFromEvent($event, $team);
+        $this->showEntryModal = true;
+    }
+
+    public function openShowMeeting(int $meetingId): void
+    {
+        $meeting = Meeting::query()
+            ->where('team_id', $this->teamId)
+            ->findOrFail($meetingId);
+
+        abort_unless(Auth::user()->can('view', $meeting), 403);
+
+        $team = Team::query()->findOrFail($this->teamId);
+        $this->populateViewFromMeeting($meeting, $team);
+        $this->showEntryModal = true;
+    }
+
+    public function closeEntryModal(): void
+    {
+        $this->showEntryModal = false;
+        $this->resetViewState();
+    }
+
+    public function editEventFromView(): void
+    {
+        if ($this->viewingEntryKind !== 'event' || ! $this->viewingEntryId) {
+            return;
+        }
+
+        $eventId = $this->viewingEntryId;
+        $this->closeEntryModal();
+        $this->openEditEvent($eventId);
     }
 
     public function openEditEvent(int $eventId): void
@@ -457,5 +527,72 @@ class Calendar extends Component
         $this->startsAtLocal = null;
         $this->endsAtLocal = null;
         $this->resetValidation();
+    }
+
+    protected function populateViewFromEvent(CalendarEvent $event, Team $team): void
+    {
+        $displayTimezone = $this->calendarTimezone($team);
+        $startsAt = TeamDateTime::toTeamTimezone($team, $event->starts_at)->setTimezone($displayTimezone);
+        $endsAt = TeamDateTime::toTeamTimezone($team, $event->ends_at)->setTimezone($displayTimezone);
+
+        $this->resetViewState();
+        $this->viewingEntryKind = 'event';
+        $this->viewingEntryId = $event->id;
+        $this->viewingCanEdit = Auth::user()->can('update', $event);
+        $this->viewTitle = $event->title;
+        $this->viewDescription = $event->description ?? '';
+        $this->viewLocation = $event->location ?? '';
+        $this->viewScheduleLabel = $this->formatViewScheduleLabel($startsAt, $endsAt, $event->all_day);
+        $this->viewTypeLabel = 'Calendar event';
+    }
+
+    protected function populateViewFromMeeting(Meeting $meeting, Team $team): void
+    {
+        $displayTimezone = $this->calendarTimezone($team);
+        $startsAt = TeamDateTime::toTeamTimezone($team, $meeting->scheduled_at)->setTimezone($displayTimezone);
+        $endsAt = $startsAt->copy()->addHour();
+
+        $this->resetViewState();
+        $this->viewingEntryKind = 'meeting';
+        $this->viewingEntryId = $meeting->id;
+        $this->viewingCanEdit = Auth::user()->can('update', $meeting);
+        $this->viewTitle = $meeting->title;
+        $this->viewDescription = $meeting->agenda_notes ?? '';
+        $this->viewLocation = $meeting->location ?? '';
+        $this->viewVirtualLink = $meeting->virtual_link;
+        $this->viewScheduleLabel = $this->formatViewScheduleLabel($startsAt, $endsAt, false);
+        $this->viewStatusLabel = $meeting->status->label();
+        $this->viewTypeLabel = $meeting->type->label();
+        $this->viewEntryUrl = route('teams.meetings.show', ['team' => $team->id, 'meeting' => $meeting->id]);
+        $this->viewEditUrl = route('teams.meetings.edit', ['team' => $team->id, 'meeting' => $meeting->id]);
+    }
+
+    protected function formatViewScheduleLabel(Carbon $startsAt, Carbon $endsAt, bool $allDay): string
+    {
+        if ($allDay) {
+            if ($startsAt->isSameDay($endsAt)) {
+                return 'All day · '.$startsAt->format('M j, Y');
+            }
+
+            return 'All day · '.$startsAt->format('M j, Y').' – '.$endsAt->format('M j, Y');
+        }
+
+        return TeamDateTime::formatTimeRange($startsAt, $endsAt).' · '.$startsAt->format('M j, Y');
+    }
+
+    protected function resetViewState(): void
+    {
+        $this->viewingEntryKind = null;
+        $this->viewingEntryId = null;
+        $this->viewingCanEdit = false;
+        $this->viewTitle = '';
+        $this->viewDescription = '';
+        $this->viewLocation = '';
+        $this->viewScheduleLabel = '';
+        $this->viewStatusLabel = null;
+        $this->viewTypeLabel = null;
+        $this->viewVirtualLink = null;
+        $this->viewEntryUrl = null;
+        $this->viewEditUrl = null;
     }
 }

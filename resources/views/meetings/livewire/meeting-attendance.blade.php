@@ -1,4 +1,4 @@
-<div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
     <div class="rounded-md bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
         <p class="font-medium text-gray-900 dark:text-gray-100">Attendance summary</p>
         <p class="mt-1">{{ $attendanceSummary['present'] }} of {{ $attendanceSummary['total_invited'] }} invited present</p>
