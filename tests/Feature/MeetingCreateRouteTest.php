@@ -12,7 +12,7 @@ class MeetingCreateRouteTest extends TestCase
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
 
         $matched = Route::getRoutes()->match(
-            \Illuminate\Http\Request::create("/teams/{$team->id}/meetings/create", 'GET')
+            \Illuminate\Http\Request::create(entity_path("{$team->id}/meetings/create"), 'GET')
         );
 
         $this->assertSame('teams.meetings.create', $matched->getName());

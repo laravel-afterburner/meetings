@@ -1,11 +1,12 @@
 {
     "name": "laravel-afterburner/meetings",
     "description": "Team-scoped meetings for Afterburner applications",
-    "version": "1.10.5",
+    "version": "1.10.6",
     "type": "library",
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "laravel-afterburner/support": "^1.0",
         "laravel/framework": "^11.0",
         "laravel-afterburner/jetstream": "^1.0|dev-master",
         "livewire/livewire": "^3.5"

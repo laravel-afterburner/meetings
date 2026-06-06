@@ -76,7 +76,7 @@ class CalendarTest extends TestCase
         [$user, $team] = $this->createTeamWithUser(['manage_meetings']);
 
         $matched = Route::getRoutes()->match(
-            Request::create("/teams/{$team->id}/meetings/calendar", 'GET')
+            Request::create(entity_path("{$team->id}/meetings/calendar"), 'GET')
         );
 
         $this->assertSame('teams.meetings.calendar', $matched->getName());

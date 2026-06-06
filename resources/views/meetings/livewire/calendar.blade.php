@@ -53,7 +53,7 @@
                                 : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100',
                         ])
                     >
-                        Team time
+                        {{ entity_title() }} time
                     </button>
                 </div>
             @endif
@@ -419,7 +419,7 @@
                             <x-label for="startsAtLocal" value="Starts" />
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">({{ $inputTimezone }})</p>
                             @if ($inputTeamTimezoneHint)
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Team time zone: {{ $inputTeamTimezoneHint }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ entity_title() }} time zone: {{ $inputTeamTimezoneHint }}</p>
                             @endif
                             <x-input id="startsAtLocal" type="datetime-local" class="mt-1 block w-full" wire:model.live="startsAtLocal" required />
                             <x-input-error for="startsAtLocal" class="mt-2" />
@@ -429,7 +429,7 @@
                             <x-label for="endsAtLocal" value="Ends" />
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">({{ $inputTimezone }})</p>
                             @if ($inputTeamTimezoneHint)
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Team time zone: {{ $inputTeamTimezoneHint }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ entity_title() }} time zone: {{ $inputTeamTimezoneHint }}</p>
                             @endif
                             <x-input id="endsAtLocal" type="datetime-local" class="mt-1 block w-full" wire:model="endsAtLocal" min="{{ $startsAtLocal }}" required />
                             <x-input-error for="endsAtLocal" class="mt-2" />

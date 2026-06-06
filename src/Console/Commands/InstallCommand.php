@@ -44,7 +44,7 @@ class InstallCommand extends Command
         $this->comment('Next steps:');
         $this->comment('1. Add the HasMeetings trait to App\\Models\\Team');
         $this->comment('2. Add this package to tailwind.config.js content paths (see README), then npm run build');
-        $this->comment('3. Visit /teams/{team}/meetings to start using meetings');
+        $this->comment('3. Visit /'.entity_url_slug().'/{team}/meetings to start using meetings');
         $this->comment('Note: Meetings migrations load automatically from the package.');
 
         return Command::SUCCESS;
