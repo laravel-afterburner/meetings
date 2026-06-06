@@ -164,6 +164,42 @@ class TeamDateTime
     }
 
     /**
+     * Format a Carbon already in the intended display timezone.
+     * Returns HTML — use with {!! !!} in Blade.
+     */
+    public static function formatDisplayCarbon(Carbon $carbon, bool $includeTime = true): string
+    {
+        $formatted = format_date_superscript($carbon, $includeTime ? 'datetime' : 'date');
+
+        if ($includeTime) {
+            $formatted .= ' ('.$carbon->format('T').')';
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Format a calendar entry schedule for HTML display.
+     * Returns HTML — use with {!! !!} in Blade.
+     */
+    public static function formatCalendarEntrySchedule(Carbon $startsAt, Carbon $endsAt, bool $allDay): string
+    {
+        if ($allDay) {
+            if ($startsAt->isSameDay($endsAt)) {
+                return 'All day · '.format_date_superscript($startsAt, 'date');
+            }
+
+            return 'All day · '.format_date_superscript($startsAt, 'date').' – '.format_date_superscript($endsAt, 'date');
+        }
+
+        if ($startsAt->isSameDay($endsAt)) {
+            return self::formatTimeRange($startsAt, $endsAt).' · '.format_date_superscript($startsAt, 'date');
+        }
+
+        return self::formatDisplayCarbon($startsAt).' – '.self::formatDisplayCarbon($endsAt);
+    }
+
+    /**
      * Format a date for HTML display with ordinal superscript and 12-hour time.
      * Returns HTML — use with {!! !!} in Blade.
      */
@@ -175,12 +211,6 @@ class TeamDateTime
             return null;
         }
 
-        $formatted = format_date_superscript($carbon, $includeTime ? 'datetime' : 'date');
-
-        if ($includeTime) {
-            $formatted .= ' ('.$carbon->format('T').')';
-        }
-
-        return $formatted;
+        return self::formatDisplayCarbon($carbon, $includeTime);
     }
 }

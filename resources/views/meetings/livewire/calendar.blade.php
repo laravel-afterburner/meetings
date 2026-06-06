@@ -334,7 +334,7 @@
                 <dl class="mt-4 space-y-4 text-sm">
                     <div>
                         <dt class="font-medium text-gray-900 dark:text-gray-100">When</dt>
-                        <dd class="mt-1 text-gray-600 dark:text-gray-400">{{ $viewScheduleLabel }}</dd>
+                        <dd class="mt-1 text-gray-600 dark:text-gray-400">{!! $viewScheduleLabel !!}</dd>
                     </div>
 
                     @if ($viewLocation)

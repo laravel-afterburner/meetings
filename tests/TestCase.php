@@ -20,6 +20,10 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        if (! function_exists('format_date_superscript')) {
+            require_once __DIR__.'/Support/format_date_superscript_stub.php';
+        }
+
         config([
             'afterburner-meetings.enabled' => true,
             'afterburner-meetings.voting_enabled' => true,

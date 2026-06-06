@@ -542,7 +542,7 @@ class Calendar extends Component
         $this->viewTitle = $event->title;
         $this->viewDescription = $event->description ?? '';
         $this->viewLocation = $event->location ?? '';
-        $this->viewScheduleLabel = $this->formatViewScheduleLabel($startsAt, $endsAt, $event->all_day);
+        $this->viewScheduleLabel = TeamDateTime::formatCalendarEntrySchedule($startsAt, $endsAt, $event->all_day);
         $this->viewTypeLabel = 'Calendar event';
     }
 
@@ -550,7 +550,6 @@ class Calendar extends Component
     {
         $displayTimezone = $this->calendarTimezone($team);
         $startsAt = TeamDateTime::toTeamTimezone($team, $meeting->scheduled_at)->setTimezone($displayTimezone);
-        $endsAt = $startsAt->copy()->addHour();
 
         $this->resetViewState();
         $this->viewingEntryKind = 'meeting';
@@ -560,24 +559,11 @@ class Calendar extends Component
         $this->viewDescription = $meeting->agenda_notes ?? '';
         $this->viewLocation = $meeting->location ?? '';
         $this->viewVirtualLink = $meeting->virtual_link;
-        $this->viewScheduleLabel = $this->formatViewScheduleLabel($startsAt, $endsAt, false);
+        $this->viewScheduleLabel = TeamDateTime::formatDisplayCarbon($startsAt);
         $this->viewStatusLabel = $meeting->status->label();
         $this->viewTypeLabel = $meeting->type->label();
         $this->viewEntryUrl = route('teams.meetings.show', ['team' => $team->id, 'meeting' => $meeting->id]);
         $this->viewEditUrl = route('teams.meetings.edit', ['team' => $team->id, 'meeting' => $meeting->id]);
-    }
-
-    protected function formatViewScheduleLabel(Carbon $startsAt, Carbon $endsAt, bool $allDay): string
-    {
-        if ($allDay) {
-            if ($startsAt->isSameDay($endsAt)) {
-                return 'All day · '.$startsAt->format('M j, Y');
-            }
-
-            return 'All day · '.$startsAt->format('M j, Y').' – '.$endsAt->format('M j, Y');
-        }
-
-        return TeamDateTime::formatTimeRange($startsAt, $endsAt).' · '.$startsAt->format('M j, Y');
     }
 
     protected function resetViewState(): void

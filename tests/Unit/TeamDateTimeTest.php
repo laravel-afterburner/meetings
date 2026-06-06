@@ -58,6 +58,36 @@ class TeamDateTimeTest extends TestCase
         $this->assertSame('2026-06-16 00:30:00', $parsed->utc()->format('Y-m-d H:i:s'));
     }
 
+    public function test_format_display_carbon_uses_core_helper_shape(): void
+    {
+        config(['app.timezone' => 'UTC']);
+
+        [, $team] = $this->createTeamWithUser();
+        $team->update(['timezone' => 'America/Vancouver']);
+
+        $carbon = TeamDateTime::toTeamTimezone($team, Carbon::parse('2026-06-15 17:00:00', 'UTC'));
+
+        $formatted = TeamDateTime::formatDisplayCarbon($carbon);
+
+        $this->assertStringContainsString('Jun 15, 2026', $formatted);
+        $this->assertStringContainsString('10:00 AM', $formatted);
+        $this->assertStringContainsString('(PDT)', $formatted);
+    }
+
+    public function test_format_calendar_entry_schedule_uses_core_helper_for_all_day_events(): void
+    {
+        config(['app.timezone' => 'UTC']);
+
+        $startsAt = Carbon::parse('2026-06-10', 'UTC');
+        $endsAt = Carbon::parse('2026-06-12', 'UTC');
+
+        $formatted = TeamDateTime::formatCalendarEntrySchedule($startsAt, $endsAt, true);
+
+        $this->assertStringStartsWith('All day ·', $formatted);
+        $this->assertStringContainsString('Jun 10, 2026', $formatted);
+        $this->assertStringContainsString('Jun 12, 2026', $formatted);
+    }
+
     public function test_calendar_defaults_to_user_timezone_when_it_differs_from_team(): void
     {
         config(['app.timezone' => 'UTC']);
