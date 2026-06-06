@@ -2,7 +2,7 @@
 
 namespace Afterburner\Meetings\Database\Seeders;
 
-use Afterburner\Meetings\Database\Seeders\Concerns\AssignsPermissionsToTeamOwners;
+use App\Database\Seeders\Concerns\AssignsPermissionsToTeamOwners;
 use Afterburner\Meetings\Support\MeetingsPermissionDefinitions;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;

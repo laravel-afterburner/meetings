@@ -7,7 +7,7 @@ use Afterburner\Meetings\Enums\MeetingStatus;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\DocumentsIntegration;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use Afterburner\Meetings\Support\VotingIntegration;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;

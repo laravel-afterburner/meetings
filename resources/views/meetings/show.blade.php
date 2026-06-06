@@ -1,4 +1,4 @@
-<x-app-layout :title="\Afterburner\Meetings\Support\PageHeader::make('Meeting', detail: $meeting->title)">
+<x-app-layout :title="\App\Support\PageHeader::make('Meeting', detail: $meeting->title)">
     <x-slot name="header">
         <x-afterburner-meetings::page-header section="Meeting" :detail="$meeting->title" />
     </x-slot>

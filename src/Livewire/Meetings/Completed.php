@@ -9,7 +9,7 @@ use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\DocumentsIntegration;
 use Afterburner\Meetings\Support\MeetingOpenItemsChecker;
 use Afterburner\Meetings\Support\MeetingPackagePdfExporter;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;
 use Illuminate\Support\Facades\Auth;

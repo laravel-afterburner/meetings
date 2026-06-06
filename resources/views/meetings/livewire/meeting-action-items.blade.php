@@ -49,10 +49,10 @@
                                 <span>Assigned to {{ $actionItem->assignee->name }}</span>
                             @endif
                             @if ($actionItem->due_at)
-                                <span>Due {!! \Afterburner\Meetings\Support\TeamDateTime::formatDisplay($team, $actionItem->due_at, false) !!}</span>
+                                <span>Due {!! \App\Support\TeamDateTime::formatDisplay($team, $actionItem->due_at, false) !!}</span>
                             @endif
                             @if ($actionItem->completed_at)
-                                <span>Completed {!! \Afterburner\Meetings\Support\TeamDateTime::formatDisplay($team, $actionItem->completed_at) !!}</span>
+                                <span>Completed {!! \App\Support\TeamDateTime::formatDisplay($team, $actionItem->completed_at) !!}</span>
                             @endif
                         </div>
                     </div>

@@ -12,7 +12,7 @@ use Afterburner\Meetings\Support\CalendarEventSchedule;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
 use Afterburner\Meetings\Support\CalendarWeekLayout;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;
 use Carbon\Carbon;

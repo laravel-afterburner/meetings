@@ -8,7 +8,7 @@ use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
 use Afterburner\Meetings\Support\MeetingActionItemNotificationService;
 use Afterburner\Meetings\Support\MeetingsAuditLogger;
-use Afterburner\Meetings\Support\TeamPermissionGate;
+use App\Support\TeamPermissionGate;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 

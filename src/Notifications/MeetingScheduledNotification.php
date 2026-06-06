@@ -3,7 +3,7 @@
 namespace Afterburner\Meetings\Notifications;
 
 use Afterburner\Meetings\Models\Meeting;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;

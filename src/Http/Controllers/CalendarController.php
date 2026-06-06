@@ -7,7 +7,7 @@ use Afterburner\Meetings\Support\CalendarFeedAccess;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
 use Afterburner\Meetings\Support\IcsCalendarExporter;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use App\Models\Team;
 use App\Models\User;
 use Carbon\Carbon;

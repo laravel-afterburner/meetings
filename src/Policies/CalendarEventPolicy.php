@@ -5,7 +5,7 @@ namespace Afterburner\Meetings\Policies;
 use Afterburner\Meetings\Models\CalendarEvent;
 use Afterburner\Meetings\Support\MeetingsPermissions;
 use Afterburner\Meetings\Support\SubscriptionEntitlementGate;
-use Afterburner\Meetings\Support\TeamPermissionGate;
+use App\Support\TeamPermissionGate;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;

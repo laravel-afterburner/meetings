@@ -4,7 +4,7 @@ namespace Afterburner\Meetings\Tests;
 
 use Afterburner\Documents\Providers\DocumentsServiceProvider;
 use Afterburner\Meetings\Providers\MeetingsServiceProvider;
-use Afterburner\Support\Testing\Concerns\ConfiguresAfterburnerEntity;
+use Tests\Concerns\ConfiguresAfterburnerEntity;
 use Afterburner\Voting\Providers\VotingServiceProvider;
 use App\Models\Team;
 use App\Models\User;
@@ -23,8 +23,10 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         if (! function_exists('format_date_superscript')) {
-            require_once __DIR__.'/Support/format_date_superscript_stub.php';
+            require_once __DIR__.'/Support/format_helpers.php';
         }
+
+        require_once __DIR__.'/Fixtures/entity_helpers.php';
 
         config([
             'afterburner-meetings.enabled' => true,

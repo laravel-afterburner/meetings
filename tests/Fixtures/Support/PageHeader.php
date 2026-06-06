@@ -1,6 +1,6 @@
 <?php
 
-namespace Afterburner\Meetings\Support;
+namespace App\Support;
 
 class PageHeader
 {

@@ -13,7 +13,7 @@ use Afterburner\Meetings\Models\CalendarEvent;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\CalendarFeedToken;
 use Afterburner\Meetings\Support\CalendarQuery;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use Afterburner\Meetings\Tests\TestCase;
 use App\Models\Team;
 use Carbon\Carbon;

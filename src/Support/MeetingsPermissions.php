@@ -4,6 +4,7 @@ namespace Afterburner\Meetings\Support;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Support\TeamPermissionGate;
 
 /**
  * Meetings module areas (list vs calendar) mapped to permission slugs.

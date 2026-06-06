@@ -10,7 +10,7 @@ use Afterburner\Meetings\Enums\MeetingType;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Support\DocumentsIntegration;
 use Afterburner\Meetings\Support\MeetingAudienceService;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use Afterburner\Meetings\Support\VotingIntegration;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;

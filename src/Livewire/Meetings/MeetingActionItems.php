@@ -10,7 +10,7 @@ use Afterburner\Meetings\Enums\ActionItemStatus;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Meetings\Models\MeetingActionItem;
 use Afterburner\Meetings\Support\MeetingActionItemAssigneeService;
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use App\Models\Team;
 use App\Traits\InteractsWithBanner;
 use Illuminate\Support\Facades\Auth;

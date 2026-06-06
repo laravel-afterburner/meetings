@@ -1,4 +1,4 @@
-<x-app-layout :title="\Afterburner\Meetings\Support\PageHeader::make('Events', 'Calendar')">
+<x-app-layout :title="\App\Support\PageHeader::make('Events', 'Calendar')">
     <x-slot name="header">
         <x-afterburner-meetings::page-header section="Events" action="Calendar" />
     </x-slot>

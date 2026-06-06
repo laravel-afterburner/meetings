@@ -53,7 +53,7 @@
                     </div>
                     @if ($meeting->minutes_finalized_at)
                         <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            Finalized {!! \Afterburner\Meetings\Support\TeamDateTime::formatDisplay($team, $meeting->minutes_finalized_at) !!}
+                            Finalized {!! \App\Support\TeamDateTime::formatDisplay($team, $meeting->minutes_finalized_at) !!}
                             @if ($meeting->minutesFinalizedBy)
                                 by {{ $meeting->minutesFinalizedBy->name }}
                             @endif

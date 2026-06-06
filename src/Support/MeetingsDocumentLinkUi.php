@@ -5,6 +5,7 @@ namespace Afterburner\Meetings\Support;
 use Afterburner\Documents\Models\Document;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\TeamPermissionGate;
 
 class MeetingsDocumentLinkUi
 {

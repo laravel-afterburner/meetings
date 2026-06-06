@@ -2,7 +2,7 @@
 
 namespace Afterburner\Meetings\Tests\Unit;
 
-use Afterburner\Meetings\Support\TeamDateTime;
+use App\Support\TeamDateTime;
 use Afterburner\Meetings\Tests\TestCase;
 use Carbon\Carbon;
 
@@ -69,7 +69,8 @@ class TeamDateTimeTest extends TestCase
 
         $formatted = TeamDateTime::formatDisplayCarbon($carbon);
 
-        $this->assertStringContainsString('Jun 15, 2026', $formatted);
+        $this->assertStringContainsString('June 15', $formatted);
+        $this->assertStringContainsString('<sup>th</sup>', $formatted);
         $this->assertStringContainsString('10:00 AM', $formatted);
         $this->assertStringContainsString('(PDT)', $formatted);
     }
@@ -84,8 +85,8 @@ class TeamDateTimeTest extends TestCase
         $formatted = TeamDateTime::formatCalendarEntrySchedule($startsAt, $endsAt, true);
 
         $this->assertStringStartsWith('All day ·', $formatted);
-        $this->assertStringContainsString('Jun 10, 2026', $formatted);
-        $this->assertStringContainsString('Jun 12, 2026', $formatted);
+        $this->assertStringContainsString('June 10', $formatted);
+        $this->assertStringContainsString('June 12', $formatted);
     }
 
     public function test_calendar_defaults_to_user_timezone_when_it_differs_from_team(): void

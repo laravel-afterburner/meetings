@@ -2,7 +2,7 @@
     <div class="flex flex-wrap items-center gap-2">
         @if ($meeting->minutes_finalized_at)
             <p class="text-xs text-gray-500 dark:text-gray-400">
-                Finalized {!! \Afterburner\Meetings\Support\TeamDateTime::formatDisplay($team, $meeting->minutes_finalized_at) !!}
+                Finalized {!! \App\Support\TeamDateTime::formatDisplay($team, $meeting->minutes_finalized_at) !!}
                 @if ($meeting->minutesFinalizedBy)
                     by {{ $meeting->minutesFinalizedBy->name }}
                 @endif
