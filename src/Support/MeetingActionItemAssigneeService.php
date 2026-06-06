@@ -17,12 +17,18 @@ class MeetingActionItemAssigneeService
         $meeting->loadMissing('team');
 
         $invited = app(MeetingAudienceService::class)->invitedUsers($meeting);
-        $councilRoleSlugs = config('afterburner-meetings.council_position_role_slugs', [
-            'president',
-            'vice_president',
-            'secretary',
-            'treasurer',
-        ]);
+        $resolver = config('afterburner-meetings.council_role_resolver');
+
+        if (is_string($resolver) && class_exists($resolver) && method_exists($resolver, 'slugs')) {
+            $councilRoleSlugs = $resolver::slugs();
+        } else {
+            $councilRoleSlugs = config('afterburner-meetings.council_position_role_slugs', [
+                'president',
+                'vice_president',
+                'secretary',
+                'treasurer',
+            ]);
+        }
         $councilHolders = app(MeetingAudienceService::class)->usersWithAnyRole($meeting->team, $councilRoleSlugs);
 
         return $invited

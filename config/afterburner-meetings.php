@@ -59,6 +59,8 @@ return [
     | they were not marked present at the meeting.
     |
     */
+    'council_role_resolver' => env('AFTERBURNER_COUNCIL_ROLE_RESOLVER', \App\Support\CouncilRoles::class),
+
     'council_position_role_slugs' => [
         'president',
         'vice_president',
