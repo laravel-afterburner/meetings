@@ -5,6 +5,7 @@ namespace Afterburner\Meetings\Support;
 use Afterburner\Meetings\Models\CalendarEvent;
 use Afterburner\Meetings\Models\Meeting;
 use App\Models\Team;
+use App\Support\TeamDateTime;
 use Carbon\Carbon;
 
 class CalendarEntry

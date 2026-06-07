@@ -1,0 +1,18 @@
+---
+description: Use Afterburner core date formatting for user-facing dates and times
+alwaysApply: true
+---
+
+# Date and time display
+
+Do not format user-facing dates or times with raw Carbon `->format()`, `strftime()`, or PHP `date()`.
+
+Use the Afterburner core helper `format_date_superscript()` (ordinal superscript HTML). In packages, use `App\Support\TeamDateTime`:
+
+- Team context: `\App\Support\TeamDateTime::formatDisplay($team, $dateTime, $includeTime)`
+- Already-localized Carbon (e.g. calendar display timezone): `\App\Support\TeamDateTime::formatDisplayCarbon($carbon, $includeTime)`
+- Calendar entry ranges: `\App\Support\TeamDateTime::formatCalendarEntrySchedule($startsAt, $endsAt, $allDay)`
+
+Render HTML output with Blade unescaped syntax: `{!! $formatted !!}`.
+
+Raw `->format()` is only for machine values: ISO dates, ICS exports, query strings, and form `wire:model` inputs.

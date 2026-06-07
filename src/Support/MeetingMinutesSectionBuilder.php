@@ -6,6 +6,7 @@ use Afterburner\Meetings\Contracts\MeetingMinutesAttendanceSummaryProvider;
 use Afterburner\Meetings\Models\Meeting;
 use Afterburner\Voting\Services\BallotTallyService;
 use Afterburner\Voting\Services\QuorumService;
+use App\Support\TeamDateTime;
 
 class MeetingMinutesSectionBuilder
 {
