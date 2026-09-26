@@ -21,12 +21,6 @@ class InstallCommand extends Command
             '--force' => true,
         ]);
 
-        $this->info('Publishing views...');
-        $this->call('vendor:publish', [
-            '--tag' => 'afterburner-meetings-assets',
-            '--force' => true,
-        ]);
-
         if ($this->confirm('Run migrations now?', true)) {
             $this->info('Running migrations...');
             $this->call('migrate');
@@ -45,7 +39,7 @@ class InstallCommand extends Command
         $this->comment('1. Add the HasMeetings trait to App\\Models\\Team');
         $this->comment('2. Add this package to tailwind.config.js content paths (see README), then npm run build');
         $this->comment('3. Visit /'.entity_url_slug().'/{team}/meetings to start using meetings');
-        $this->comment('Note: Meetings migrations load automatically from the package.');
+        $this->comment('Note: Meetings migrations load automatically from the package. Views render from the package. Publish them only to customize: php artisan vendor:publish --tag=afterburner-meetings-assets');
 
         return Command::SUCCESS;
     }
